@@ -1,9 +1,12 @@
 package com.example.xuyiruan.sonicgesture;
 
+import android.content.Context;
+import android.media.MediaPlayer;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.media.AudioManager;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -11,6 +14,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        MediaPlayer mediaPlayer = MediaPlayer.create(MainActivity.this, R.raw.audio);
+        AudioManager audioManager= (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+        mediaPlayer.start();
+
     }
 
     @Override
