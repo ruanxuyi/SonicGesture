@@ -16,7 +16,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         MediaPlayer mediaPlayer = MediaPlayer.create(MainActivity.this, R.raw.audio);
+        //media player for playing music/soundclip
         AudioManager audioManager= (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+        //system service to manage output device,
         mediaPlayer.start();
 
     }
