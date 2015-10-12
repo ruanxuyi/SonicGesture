@@ -4,6 +4,7 @@ import android.content.Context;
 import android.media.AudioFormat;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
+import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -13,11 +14,17 @@ import android.view.View;
 import android.widget.Button;
 
 import android.media.AudioRecord;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+
 public class MainActivity extends AppCompatActivity {
 
     private static final int SAMPLE_RATE = 8000;        //recorder sample rate
     private static int audio_buffer = 1024;
-    float[] audioData = new float [1024];
+    byte[] audioData = new byte [1024];
     //initiate start/stop button
     private Button startBtn;
     //if startCount is odd, start to play music, if even, pause play music
@@ -42,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
 
 
 
+
             public void onClick(View view) {
                 //update startCount for stop/pause button functionality
                 startCount++;
@@ -50,8 +58,12 @@ public class MainActivity extends AppCompatActivity {
                 if(startCount%2 == 0){
                     mediaPlayer.pause();
                 }else{
+                    audioManager.setSpeakerphoneOn(false);
+                    mediaPlayer.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);//set to play on front speaker
                     mediaPlayer.start();
+                    mediaPlayer.setLooping(true);               //loop sound clip
                     startRecord();
+
 
                 }
             }
@@ -62,9 +74,26 @@ public class MainActivity extends AppCompatActivity {
     private void startRecord()
     {
         mRecorder= new AudioRecord(MediaRecorder.AudioSource.MIC,SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,audio_buffer);
+                AudioFormat.ENCODING_PCM_8BIT,audio_buffer);
         mRecorder.startRecording();
-        mRecorder.read(audioData,0,1024,AudioRecord.READ_NON_BLOCKING);
+        mRecorder.read(audioData,0,1024);           //API 3 & above
+        mRecorder.release();
+        mRecorder.stop();
+
+
+        PrintWriter writer = null;
+        try {
+            writer = new PrintWriter("sound.txt", "UTF-8");
+            writer.println(audioData);
+
+            writer.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+
+
 
     }
 
