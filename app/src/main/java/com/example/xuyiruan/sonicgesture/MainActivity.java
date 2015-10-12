@@ -1,7 +1,9 @@
 package com.example.xuyiruan.sonicgesture;
 
 import android.content.Context;
+import android.media.AudioFormat;
 import android.media.MediaPlayer;
+import android.media.MediaRecorder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -10,13 +12,18 @@ import android.media.AudioManager;
 import android.view.View;
 import android.widget.Button;
 
+import android.media.AudioRecord;
 public class MainActivity extends AppCompatActivity {
 
+    private static final int SAMPLE_RATE = 8000;        //recorder sample rate
+    private static int audio_buffer = 1024;
+    float[] audioData = new float [1024];
     //initiate start/stop button
     private Button startBtn;
     //if startCount is odd, start to play music, if even, pause play music
     int startCount = 0;
 
+    AudioRecord mRecorder;            //Media player instance
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -33,6 +40,8 @@ public class MainActivity extends AppCompatActivity {
             //media player for playing music/soundclip
             AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
+
+
             public void onClick(View view) {
                 //update startCount for stop/pause button functionality
                 startCount++;
@@ -42,10 +51,23 @@ public class MainActivity extends AppCompatActivity {
                     mediaPlayer.pause();
                 }else{
                     mediaPlayer.start();
+                    startRecord();
+
                 }
             }
         });
     }
+
+    //Audio Recording method, reading audio into a float buffer
+    private void startRecord()
+    {
+        mRecorder= new AudioRecord(MediaRecorder.AudioSource.MIC,SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,audio_buffer);
+        mRecorder.startRecording();
+        mRecorder.read(audioData,0,1024,AudioRecord.READ_NON_BLOCKING);
+
+    }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
