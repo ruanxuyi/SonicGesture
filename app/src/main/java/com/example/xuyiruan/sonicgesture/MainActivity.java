@@ -2,9 +2,9 @@ package com.example.xuyiruan.sonicgesture;
 
 import android.content.Context;
 import android.media.AudioFormat;
+import android.media.AudioTrack;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
-import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -30,23 +30,46 @@ public class MainActivity extends AppCompatActivity {
     //if startCount is odd, start to play music, if even, pause play music
     int startCount = 0;
 
+    //Kefei sine wave private instance
+    public static final int HEIGHT = 127;
+    /** 2PI**/
+    public static final double TWOPI = 2 * 3.1415;
+    public boolean start=true;
+
+    public AudioTrack audioTrack;
+    public int Hz;
+    public int waveLen;
+    public int length;
+    public byte[] wave;
+    public int sampleRate;
+
+
     AudioRecord mRecorder;            //Media player instance
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        Hz=440;
+        waveLen = 44100/ Hz;
+        length = waveLen * Hz;
+        sampleRate=44100;
+        wave = new byte[length];
+        wave=sin(wave, waveLen, length);
+
+        audioTrack=new AudioTrack(AudioManager.STREAM_VOICE_CALL, sampleRate,
+                AudioFormat.CHANNEL_CONFIGURATION_MONO, // CHANNEL_CONFIGURATION_MONO,
+                AudioFormat.ENCODING_PCM_16BIT, length, AudioTrack.MODE_STATIC);
+        audioTrack.write(wave, 0, length);
+        audioTrack.setLoopPoints(0, length / 4, -1);
+
+
+
+
         //set up start/pause button
         startBtn = (Button) findViewById(R.id.startBtn);
 
         startBtn.setOnClickListener(new View.OnClickListener() {
-
-            //set up the mediaPlayer and link the music to raw (canon in d)
-            MediaPlayer mediaPlayer = MediaPlayer.create(MainActivity.this, R.raw.audio);
-
-            //media player for playing music/soundclip
-            AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-
 
 
 
@@ -56,13 +79,20 @@ public class MainActivity extends AppCompatActivity {
 
                 //system service to manage output device,
                 if(startCount%2 == 0){
-                    mediaPlayer.pause();
+                    audioTrack.pause();
+
+                    //audioRecord.stop();
+
+                    start=true;
                 }else{
-                    audioManager.setSpeakerphoneOn(false);
-                    mediaPlayer.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);//set to play on front speaker
-                    mediaPlayer.start();
-                    mediaPlayer.setLooping(true);               //loop sound clip
-                    startRecord();
+                    if(audioTrack!=null)
+                    {
+                        audioTrack.play();
+                    }
+                    //audioRecord.startRecording();
+
+                    start=false;
+                    //startRecord();
 
 
                 }
@@ -71,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //Audio Recording method, reading audio into a float buffer
+    //not functioning yet
     private void startRecord()
     {
         mRecorder= new AudioRecord(MediaRecorder.AudioSource.MIC,SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO,
@@ -118,5 +149,22 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    /**
+     * sine wave generator
+     * @param wave
+     * @param waveLen
+     * @param length
+     * @return
+     */
+
+    public static byte[] sin(byte[] wave, int waveLen, int length)
+    {
+        for (int i = 0; i < length; i++) {
+            wave[i] = (byte) (HEIGHT * (1 - Math.sin(TWOPI
+                    * ((i % waveLen) * 1.00 / waveLen))));
+        }
+        return wave;
     }
 }
