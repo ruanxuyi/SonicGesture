@@ -26,3 +26,7 @@ Initial Commit on 10/5/2015
 [JTransforms](https://sites.google.com/site/piotrwendykier/software/jtransforms)
 
 [Android 实时录音和回放,边录音边播放 (KTV回音效果)](http://www.cnblogs.com/mythou/p/3241925.html)
+
+### Git
+
+[Push commits to another branch](http://stackoverflow.com/questions/13897717/push-commits-to-another-branch)
