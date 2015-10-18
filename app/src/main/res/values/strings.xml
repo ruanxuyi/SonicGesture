@@ -1,4 +1,4 @@
-<resources>
+    <resources>
     <string name="app_name">SonicGesture</string>
 
     <string name="hello_world">Hello world!</string>
