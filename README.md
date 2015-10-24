@@ -70,3 +70,10 @@ Initial Commit on 10/5/2015
 ### Git
 
 [Push commits to another branch](http://stackoverflow.com/questions/13897717/push-commits-to-another-branch)
+
+### Git
+[resolve merge conflict by hard resetting local workplace with master status](http://stackoverflow.com/questions/15127078/git-pull-is-not-possible-unmerged-files)
+```
+- git fetch origin
+- git reset --hard origin/master
+```
