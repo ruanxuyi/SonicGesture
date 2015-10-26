@@ -6,6 +6,11 @@ Xuyi Ruan, Yunhe Liu, Wenxuan Mao and Kefei Fu
 
 Initial Commit on 10/5/2015
 
+Added Complex.java
+Author: Robert Sedgewick and Kevin Wayne (Princeton University)
+Webpage: http://introcs.cs.princeton.edu/java/97data/Complex.java.html
+Last updated: Sun Aug 2 18:43:37 EDT 2015
+
 ## Announcement: 
 
 - Meeting **Every Saturday @1:00pm** through Skype, should be very short, please plan accordingly: 
