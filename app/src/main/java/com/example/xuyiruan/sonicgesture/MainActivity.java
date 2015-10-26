@@ -24,6 +24,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -45,6 +47,9 @@ public class MainActivity extends AppCompatActivity {
     public byte[] wave;
     public int sampleRate;
 
+    //public drawComplex chart = (drawComplex) findViewById(R.id.drawComplex);
+    public static List<Integer> datas=new ArrayList<Integer>();
+
 
 
     // Wenxuan && Xuyi: varible for recording status
@@ -53,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     public static int bufferSize = 1024;
     public static final int SAMPLE_RATE = 8000;    //recorder sample rate
     public static Thread rec_Thread;
+
 
 
 
@@ -98,6 +104,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+
+
     }
 
     /**
@@ -106,6 +115,8 @@ public class MainActivity extends AppCompatActivity {
      *
      */
     private void startRecord() {
+
+        //datas=new ArrayList<Integer>();
 
         // GET THE MINIUM BUFFERSIZE FOR Audio Recorder.
         bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
@@ -176,7 +187,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             for (int i = 0; i < buffer.length; i++){
-                System.out.println("Buffer Data: " + buffer[i]);
+                //System.out.println("Buffer Data: " + buffer[i]);
                 x[i]=new Complex(buffer[i],0);
             }
         }
@@ -189,11 +200,16 @@ public class MainActivity extends AppCompatActivity {
             try {
                 //System.out.println("inside write");
                 dos.writeDouble(y[i].abs());
+                int value=Integer.valueOf((int) Math.round(y[i].abs()));
+                value=value/1000;
+                datas.add(value);
+                System.out.println("value: " + value+" size: "+i);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            System.out.println("complex Data: " + y[i]);
+            //System.out.println("complex Data: " + y[i]);
         }
+
     }
 
     /**
