@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">SonicGesture</string>
 
-    <string name="hello_world">Hello world!</string>
+    <string name="hello_world">play sound!</string>
     <string name="action_settings">Settings</string>
 </resources>
