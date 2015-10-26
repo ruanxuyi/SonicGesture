@@ -115,7 +115,7 @@ public class MainActivity extends AppCompatActivity
 
                 int bufferReadResult=audioRecord.read(buffer, 0, bufferSize);
                 count++;
-                if(count<=10)
+                if(count<=5)
                 {
                     count++;
                     System.out.println("count :"+count);
@@ -127,35 +127,20 @@ public class MainActivity extends AppCompatActivity
                     {
 
                         x[i]=new Complex(buffer[i],0);
-                        System.out.println("buffer: "+buffer[i]);
                     }
                     Complex[] y=fft(x);
                     for(int i=0; i< y.length;i++)
                     {
                         int value=Integer.valueOf((int) Math.round(y[i].abs()));
                         value=value/1000;
-                        System.out.println("value: "+value+" size: "+i+" data size: "+datas.size());
+                        //System.out.println("value: "+value+" size: "+i+" data size: "+datas.size());
                         datas.add(value);
                     }
                 }
 
             }
 
-            /*
-            for (int i = 0; i < buffer.length; i++)
-            {
 
-                x[i]=new Complex(buffer[i],0);
-            }
-            Complex[] y=fft(x);
-            for(int i=0; i< y.length;i++)
-            {
-                int value=Integer.valueOf((int) Math.round(y[i].abs()));
-                value=value/1000;
-                System.out.println("value: "+value+" size: "+i+" data size: "+datas.size());
-                datas.add(value);
-            }
-            */
         }
     };
 
