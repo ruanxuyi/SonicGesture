@@ -17,14 +17,8 @@ import android.media.AudioManager;
 import android.view.View;
 import android.widget.Button;
 import android.media.AudioRecord;
-<<<<<<< HEAD
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
-=======
-import android.widget.SeekBar;
-import android.widget.Toast;
-
->>>>>>> b4f7b7550622f480989040e1a9bd381bcd417fdb
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -44,18 +38,13 @@ public class MainActivity extends AppCompatActivity {
     int startCount = 0;
     int recordCount = 0;
 
-<<<<<<< HEAD
     // Kefei: sine wave private instance
     public static final int HEIGHT = 127;
-=======
-    //Kefei sine wave private instance
-    public static int HEIGHT = 127; //amplititude of the sound, AKA the volumn
->>>>>>> b4f7b7550622f480989040e1a9bd381bcd417fdb
     /** 2PI**/
     public static final double TWOPI = 2 * 3.1415;
     public boolean start=true;
     public AudioTrack audioTrack;
-    public int Hz; //frequency of the sound
+    public int Hz;
     public int waveLen;
     public int length;
     public byte[] wave;
@@ -77,7 +66,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-<<<<<<< HEAD
         Hz = 20000;
         waveLen = 44100/ Hz;
         length = waveLen * Hz;
@@ -90,46 +78,6 @@ public class MainActivity extends AppCompatActivity {
                 AudioFormat.ENCODING_PCM_16BIT, length, AudioTrack.MODE_STATIC);
         audioTrack.write(wave, 0, length);
         audioTrack.setLoopPoints(0, length / 4, -1);
-=======
-        //volume control module
-        SeekBar volumeSeekBar = null;
-        volumeSeekBar = (SeekBar)findViewById(R.id.volumeSeekBar);
-
-
-
-        //System.out.println("Here");
-        try{
-            volumeSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onStopTrackingTouch(SeekBar volumnSeekBar) {}
-
-                @Override
-                public void onStartTrackingTouch(SeekBar volumnSeekBar) {}
-
-                @Override
-                public void onProgressChanged(SeekBar volumnSeekBar, int progress, boolean fromUser) {
-                    HEIGHT = (int)(1.27*progress);
-                    //System.out.println("Height is" + HEIGHT);
-                    Hz=110;
-                    waveLen = 44100/ Hz;
-                    length = waveLen * Hz;
-                    sampleRate=44100;
-                    wave = new byte[length];
-                    wave=sin(wave, waveLen, length);//please read helper method for details
-                    audioTrack=new AudioTrack(AudioManager.STREAM_VOICE_CALL, sampleRate,
-                            AudioFormat.CHANNEL_CONFIGURATION_MONO, // CHANNEL_CONFIGURATION_MONO,
-                            AudioFormat.ENCODING_PCM_16BIT, length, AudioTrack.MODE_STATIC);
-                    audioTrack.write(wave, 0, length);
-                    audioTrack.setLoopPoints(0, length / 4, -1);
-                }
-            });
-
-        }
-        catch (Exception e)
-        {
-            System.out.print("error with volumeSeekBar");
-        }
->>>>>>> b4f7b7550622f480989040e1a9bd381bcd417fdb
 
         //set up start/pause button
         startBtn = (Button) findViewById(R.id.startBtn);
@@ -341,8 +289,6 @@ public class MainActivity extends AppCompatActivity {
 
     public static byte[] sin(byte[] wave, int waveLen, int length)
     {
-
-
         for (int i = 0; i < length; i++) {
             wave[i] = (byte) (HEIGHT * (1 - Math.sin(TWOPI
                     * ((i % waveLen) * 1.00 / waveLen))));
