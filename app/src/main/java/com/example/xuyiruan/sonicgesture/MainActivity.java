@@ -32,8 +32,11 @@ public class MainActivity extends AppCompatActivity {
 
     //initiate start/stop button
     private Button startBtn;
+    private Button recordBtn;
+    private Button playBtn;
     // if startCount is odd, start to play music, if even, pause play music
     int startCount = 0;
+    int recordCount = 0;
 
     // Kefei: sine wave private instance
     public static final int HEIGHT = 127;
@@ -50,8 +53,6 @@ public class MainActivity extends AppCompatActivity {
     //public drawComplex chart = (drawComplex) findViewById(R.id.drawComplex);
     public static List<Integer> datas=new ArrayList<Integer>();
 
-
-
     // Wenxuan && Xuyi: varible for recording status
     public static boolean isRecording = false;
     AudioRecord mRecorder;
@@ -60,14 +61,12 @@ public class MainActivity extends AppCompatActivity {
     public static Thread rec_Thread;
 
 
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Hz = 440;
+        Hz = 20000;
         waveLen = 44100/ Hz;
         length = waveLen * Hz;
         sampleRate = 44100;
@@ -82,6 +81,8 @@ public class MainActivity extends AppCompatActivity {
 
         //set up start/pause button
         startBtn = (Button) findViewById(R.id.startBtn);
+        recordBtn = (Button) findViewById(R.id.record_btn);
+        playBtn = (Button) findViewById(R.id.play_btn);
 
         startBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
@@ -104,6 +105,30 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        recordBtn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View view) {
+                //update recordCount for stop/pause button functionality
+                recordCount++;
+                //system service to manage output device,
+                if (startCount % 2 == 0 ) {
+                    stopRecord();
+                } else {
+                    startRecord();
+                }
+            }
+        });
+
+        /*
+        playBtn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View view) {
+                startRecord();
+            }
+        });
+        */
+
+
+
 
 
 
@@ -209,7 +234,6 @@ public class MainActivity extends AppCompatActivity {
             }
             //System.out.println("complex Data: " + y[i]);
         }
-
     }
 
     /**
