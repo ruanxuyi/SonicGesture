@@ -106,6 +106,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        /*
+        Yunhe Liu
+         */
         recordBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
                 //update recordCount for stop/pause button functionality
@@ -126,11 +129,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         */
-
-
-
-
-
 
     }
 
