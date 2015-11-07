@@ -196,42 +196,50 @@ public class MainActivity extends AppCompatActivity {
         short[] buffer = new short[bufferSize];
         Complex[] x=new Complex[bufferSize];
 
-        while (isRecording)
-        {
-            //System.out.println("before buffer read");
-            int bufferReadResult = mRecorder.read(buffer, 0, bufferSize);
-            //System.out.println("after bufferRead");
-            for (int i = 0; i < bufferReadResult; i++) {
+        try{
+            while (isRecording)
+            {
+                //System.out.println("before buffer read");
+                int bufferReadResult = mRecorder.read(buffer, 0, bufferSize);
+                //System.out.println("after bufferRead");
+                for (int i = 0; i < bufferReadResult; i++) {
+                    try {
+                        //System.out.println("inside write");
+                        dos.writeShort(buffer[i]);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                for (int i = 0; i < buffer.length; i++){
+                    //System.out.println("Buffer Data: " + buffer[i]);
+                    x[i]=new Complex(buffer[i],0);
+                }
+            }
+            Complex[] y=fft(x);
+            file = new File(getFilesDir().getAbsolutePath() + "/fftResult.txt");
+            os = new FileOutputStream(file);
+            bos = new BufferedOutputStream(os);
+            dos = new DataOutputStream(bos);
+            for (int i = 0; i < bufferSize; i++) {
                 try {
                     //System.out.println("inside write");
-                    dos.writeShort(buffer[i]);
+                    dos.writeDouble(y[i].abs());
+                    int value=Integer.valueOf((int) Math.round(y[i].abs()));
+                    value=value/1000;
+                    datas.add(value);
+                    System.out.println("value: " + value+" size: "+i);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+                //System.out.println("complex Data: " + y[i]);
             }
-            for (int i = 0; i < buffer.length; i++){
-                //System.out.println("Buffer Data: " + buffer[i]);
-                x[i]=new Complex(buffer[i],0);
-            }
+            dos.close();
         }
-        Complex[] y=fft(x);
-        file = new File(getFilesDir().getAbsolutePath() + "/fftResult.txt");
-        os = new FileOutputStream(file);
-        bos = new BufferedOutputStream(os);
-        dos = new DataOutputStream(bos);
-        for (int i = 0; i < bufferSize; i++) {
-            try {
-                //System.out.println("inside write");
-                dos.writeDouble(y[i].abs());
-                int value=Integer.valueOf((int) Math.round(y[i].abs()));
-                value=value/1000;
-                datas.add(value);
-                System.out.println("value: " + value+" size: "+i);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            //System.out.println("complex Data: " + y[i]);
+        catch(Exception e)
+        {
+
         }
+
     }
 
     /**
