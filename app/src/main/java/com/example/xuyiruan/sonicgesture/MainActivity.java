@@ -24,6 +24,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -45,6 +47,9 @@ public class MainActivity extends AppCompatActivity {
     public byte[] wave;
     public int sampleRate;
 
+    //public drawComplex chart = (drawComplex) findViewById(R.id.drawComplex);
+    public static List<Integer> datas=new ArrayList<Integer>();
+
 
 
     // Wenxuan && Xuyi: varible for recording status
@@ -53,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     public static int bufferSize = 1024;
     public static final int SAMPLE_RATE = 8000;    //recorder sample rate
     public static Thread rec_Thread;
+
 
 
 
@@ -85,19 +91,22 @@ public class MainActivity extends AppCompatActivity {
                 if (startCount % 2 == 0 ) {
                     start=true;
                     // Pause Audio Player
-                    audioTrack.pause();
+                    //audioTrack.pause();
                     // STOP Recorder
                     stopRecord();
                 } else {
                     start = false;
                     if (audioTrack != null)  {
-                        audioTrack.play();
+                        //audioTrack.play();
                     }
                     // start recorder
                     startRecord();
                 }
             }
         });
+
+
+
     }
 
     /**
@@ -107,9 +116,11 @@ public class MainActivity extends AppCompatActivity {
      */
     private void startRecord() {
 
+        //datas=new ArrayList<Integer>();
+
         // GET THE MINIUM BUFFERSIZE FOR Audio Recorder.
-        //bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
-        //        AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
         // INITIALIZE an audioRecord object
         mRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
                 SAMPLE_RATE,
@@ -176,29 +187,29 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             for (int i = 0; i < buffer.length; i++){
-                System.out.println("Buffer Data: " + buffer[i]);
+                //System.out.println("Buffer Data: " + buffer[i]);
                 x[i]=new Complex(buffer[i],0);
             }
         }
         Complex[] y=fft(x);
-        File file_fft = new File(getFilesDir().getAbsolutePath() + "/fftResult.txt");
-        FileOutputStream os_fft = new FileOutputStream(file_fft);
-        BufferedOutputStream bos_fft = new BufferedOutputStream(os_fft);
-        DataOutputStream dos_fft = new DataOutputStream(bos_fft);
-        try {
-            for (int i = 0; i < bufferSize; i++)
-            {
-
+        file = new File(getFilesDir().getAbsolutePath() + "/fftResult.txt");
+        os = new FileOutputStream(file);
+        bos = new BufferedOutputStream(os);
+        dos = new DataOutputStream(bos);
+        for (int i = 0; i < bufferSize; i++) {
+            try {
                 //System.out.println("inside write");
-                dos_fft.writeDouble(y[i].abs());
-                System.out.println("complex Data: " + y[i]);
+                dos.writeDouble(y[i].abs());
+                int value=Integer.valueOf((int) Math.round(y[i].abs()));
+                value=value/1000;
+                datas.add(value);
+                System.out.println("value: " + value+" size: "+i);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            os_fft.close();
-
-        }catch (IOException e)
-        {
-            e.printStackTrace();
+            //System.out.println("complex Data: " + y[i]);
         }
+
     }
 
     /**
