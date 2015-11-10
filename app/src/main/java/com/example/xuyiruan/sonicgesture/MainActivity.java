@@ -14,6 +14,8 @@ import android.media.MediaRecorder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.media.AudioManager;
+import android.text.AndroidCharacter;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.media.AudioRecord;
@@ -51,12 +53,11 @@ public class MainActivity extends AppCompatActivity {
     public static List<Integer> datas=new ArrayList<Integer>();
 
 
-
     // Wenxuan && Xuyi: varible for recording status
     public static boolean isRecording = false;
     AudioRecord mRecorder;
     public static int bufferSize = 1024;
-    public static final int SAMPLE_RATE = 8000;    //recorder sample rate
+    public static final int SAMPLE_RATE = 44100;    //recorder sample rate
     public static Thread rec_Thread;
 
 
@@ -80,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
         audioTrack.write(wave, 0, length);
         audioTrack.setLoopPoints(0, length / 4, -1);
 
-        //set up start/pause button
+        // set up start/pause button
         startBtn = (Button) findViewById(R.id.startBtn);
 
         startBtn.setOnClickListener(new View.OnClickListener() {
@@ -88,25 +89,22 @@ public class MainActivity extends AppCompatActivity {
                 //update startCount for stop/pause button functionality
                 startCount++;
                 //system service to manage output device,
-                if (startCount % 2 == 0 ) {
-                    start=true;
+                if (startCount % 2 == 0) {
+                    start = true;
                     // Pause Audio Player
-                    audioTrack.pause();
+                    //audioTrack.pause();
                     // STOP Recorder
                     stopRecord();
                 } else {
                     start = false;
-                    if (audioTrack != null)  {
-                        audioTrack.play();
-                    }
+                    //if (audioTrack != null)  {
+                    //    audioTrack.play();
+                    //}
                     // start recorder
                     startRecord();
                 }
             }
         });
-
-
-
     }
 
     /**
@@ -121,6 +119,14 @@ public class MainActivity extends AppCompatActivity {
         // GET THE MINIUM BUFFERSIZE FOR Audio Recorder.
         bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+
+        if (bufferSize == AudioRecord.ERROR
+                || bufferSize == AudioRecord.ERROR_BAD_VALUE) {
+            Log.i(this.toString(), "error detected for frequency para: " + SAMPLE_RATE);
+            throw new IllegalArgumentException("device not support this sample rate");
+        }
+
+
         // INITIALIZE an audioRecord object
         mRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
                 SAMPLE_RATE,
@@ -171,12 +177,19 @@ public class MainActivity extends AppCompatActivity {
         DataOutputStream dos = new DataOutputStream(bos);
 
         short[] buffer = new short[bufferSize];
-        Complex[] x=new Complex[bufferSize];
+        // Complex[] x=new Complex[bufferSize];
 
         while (isRecording)
         {
             //System.out.println("before buffer read");
             int bufferReadResult = mRecorder.read(buffer, 0, bufferSize);
+
+            if (bufferReadResult == AudioRecord.ERROR_INVALID_OPERATION
+                    || bufferReadResult == AudioRecord.ERROR_BAD_VALUE) {
+                Log.i(this.toString(), "Err@ Write Raw data to Buffer");
+                throw new IllegalArgumentException("device not support this sample rate");
+            }
+
             //System.out.println("after bufferRead");
             for (int i = 0; i < bufferReadResult; i++) {
                 try {
@@ -187,15 +200,19 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             for (int i = 0; i < buffer.length; i++){
-                //System.out.println("Buffer Data: " + buffer[i]);
-                x[i]=new Complex(buffer[i],0);
+                System.out.println("Buffer Data: " + buffer[i]);
+                //x[i]=new Complex(buffer[i],0);
             }
         }
-        Complex[] y=fft(x);
-        file = new File(getFilesDir().getAbsolutePath() + "/fftResult.txt");
-        os = new FileOutputStream(file);
-        bos = new BufferedOutputStream(os);
-        dos = new DataOutputStream(bos);
+
+
+
+        //Complex[] y=fft(x);
+        //file = new File(getFilesDir().getAbsolutePath() + "/fftResult.txt");
+        //os = new FileOutputStream(file);
+        //bos = new BufferedOutputStream(os);
+        //dos = new DataOutputStream(bos);
+        /**
         for (int i = 0; i < bufferSize; i++) {
             try {
                 //System.out.println("inside write");
@@ -209,6 +226,7 @@ public class MainActivity extends AppCompatActivity {
             }
             //System.out.println("complex Data: " + y[i]);
         }
+         **/
 
     }
 
