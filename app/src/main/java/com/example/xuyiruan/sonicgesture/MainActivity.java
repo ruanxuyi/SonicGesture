@@ -1,234 +1,338 @@
-//////////////////////////////////////////////
-//
-//  ECE 454 Capstone design Project
-//  Author:  Yunhe Liu, Wenxuan Mao, Kefei Fu, Xuyi Ruan
-//  2015 Fall - Sonic Gesture Project
-//
-//////////////////////////////////////////////
-
 package com.example.xuyiruan.sonicgesture;
 
+import android.content.Intent;
 import android.media.AudioFormat;
+import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
+import android.net.Uri;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.media.AudioManager;
-import android.text.AndroidCharacter;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.media.AudioRecord;
+import android.widget.EditText;
+import android.widget.TextView;
+
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
-
-
-    //initiate start/stop button
-    private Button startBtn;
-    // if startCount is odd, start to play music, if even, pause play music
-    int startCount = 0;
-
-    // Kefei: sine wave private instance
+public class MainActivity extends AppCompatActivity
+{
     public static final int HEIGHT = 127;
     /** 2PI**/
-    public static final double TWOPI = 2 * 3.1415;
+    public static final double TWOPI =  3.1415*2;
     public boolean start=true;
+    public Button play;
+    public Button sendEmail;
+    public View view;
+    public TextView text;
     public AudioTrack audioTrack;
     public int Hz;
     public int waveLen;
     public int length;
     public byte[] wave;
+    public byte[] generatedSnd;
     public int sampleRate;
+    public AudioRecord audioRecord;
+    HandlerThread thread;
+    Handler handler1;
+    Handler handler2=new Handler();
 
-    //public drawComplex chart = (drawComplex) findViewById(R.id.drawComplex);
+
     public static List<Integer> datas=new ArrayList<Integer>();
+    public ArrayList<Double> realData=new ArrayList<Double>();
+    public int bufferSize=512;
+    public boolean isRecording;
+    private Object tmp = new Object() ;
+    public static int Count;
+    public double intense1=0;
+    public double intense2=0;
+    public double dif=0;
+    public int band =7500;
 
+    public static boolean right;
 
-    // Wenxuan && Xuyi: varible for recording status
-    public static boolean isRecording = false;
-    AudioRecord mRecorder;
-    public static int bufferSize = 1024;
-    public static final int SAMPLE_RATE = 44100;    //recorder sample rate
-    public static Thread rec_Thread;
-
-
-
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState)
+    {
+        System.out.println("here");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        Hz = 440;
+        Hz=14000;
         waveLen = 44100/ Hz;
-        length = waveLen * Hz;
-        sampleRate = 44100;
+        length = 44100*80;
+        sampleRate=44100;
         wave = new byte[length];
-        wave = sin(wave, waveLen, length);
+        generatedSnd = new byte[2 * length];
+        sin(wave, waveLen, length);
+        //audioTrack.write(wave, 0, length);
+        play = (Button)findViewById(R.id.button);
+        play.setOnClickListener(new playButtonListener());
 
-        audioTrack = new AudioTrack(AudioManager.STREAM_VOICE_CALL, sampleRate,
-                AudioFormat.CHANNEL_CONFIGURATION_MONO,
-                AudioFormat.ENCODING_PCM_16BIT, length, AudioTrack.MODE_STATIC);
-        audioTrack.write(wave, 0, length);
-        audioTrack.setLoopPoints(0, length / 4, -1);
+        sendEmail = (Button)findViewById(R.id.sendEmail);
+        sendEmail.setOnClickListener(new sendButtonListener());
+        text =(TextView) findViewById(R.id.text);
 
-        // set up start/pause button
-        startBtn = (Button) findViewById(R.id.startBtn);
-
-        startBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                //update startCount for stop/pause button functionality
-                startCount++;
-                //system service to manage output device,
-                if (startCount % 2 == 0) {
-                    start = true;
-                    // Pause Audio Player
-                    //audioTrack.pause();
-                    // STOP Recorder
-                    stopRecord();
-                } else {
-                    start = false;
-                    //if (audioTrack != null)  {
-                    //    audioTrack.play();
-                    //}
-                    // start recorder
-                    startRecord();
-                }
-            }
-        });
-    }
-
-    /**
-     *  Author: Wenxuan && Xuyi
-     *  Function: Start the recorder with AudioRecord function
-     *
-     */
-    private void startRecord() {
-
-        //datas=new ArrayList<Integer>();
-
-        // GET THE MINIUM BUFFERSIZE FOR Audio Recorder.
-        bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
-                AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-
-        if (bufferSize == AudioRecord.ERROR
-                || bufferSize == AudioRecord.ERROR_BAD_VALUE) {
-            Log.i(this.toString(), "error detected for frequency para: " + SAMPLE_RATE);
-            throw new IllegalArgumentException("device not support this sample rate");
-        }
-
-
-        // INITIALIZE an audioRecord object
-        mRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
-                SAMPLE_RATE,
+        bufferSize = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        audioRecord = new AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                sampleRate,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
                 bufferSize);
+        if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED)
+            System.out.println("error");
+        audioTrack=new AudioTrack(
+                AudioManager.STREAM_MUSIC,
+                sampleRate,
+                AudioFormat.CHANNEL_OUT_MONO, // CHANNEL_CONFIGURATION_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                generatedSnd.length,
+                AudioTrack.MODE_STATIC);
 
-        mRecorder.startRecording();
-        isRecording = true;
+        audioTrack.write(generatedSnd, 0, generatedSnd.length);
+        audioTrack.setLoopPoints(0, length / 4, -1);
+        thread=new HandlerThread("jjj");
+        thread.start();
+        handler1 =new Handler(thread.getLooper());
 
-        System.out.println("recording started");
-        // new thread for recorder to prevent UI freezed
-        rec_Thread = new Thread(new Runnable() {
-            public void run() {
-                try {
-                    writeToFile();
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                }
-            }
-        }, "Recorder Thread");
-        rec_Thread.start();
+        right=true;
     }
-
-    /**
-     *  Author: Xuyi
-     *  Function: stop the recorder and reset all relative varibles
-     *
-     */
-    private void stopRecord() {
-
-        isRecording = false;
-        mRecorder.stop();
-        mRecorder.release();
-        mRecorder = null;
-        rec_Thread = null;
-    }
-
-    /**
-     *  Author: Xuyi
-     *  Function: collect sample data from MIC and write result to a file.
-     *
-     */
-    private void writeToFile() throws FileNotFoundException {
-        File file = new File(getFilesDir().getAbsolutePath() + "/example.txt");
-        OutputStream os = new FileOutputStream(file);
-        BufferedOutputStream bos = new BufferedOutputStream(os);
-        DataOutputStream dos = new DataOutputStream(bos);
-
-        short[] buffer = new short[bufferSize];
-        // Complex[] x=new Complex[bufferSize];
-
-        while (isRecording)
+    class playButtonListener implements View.OnClickListener
+    {
+        public void onClick(View v)
         {
-            //System.out.println("before buffer read");
-            int bufferReadResult = mRecorder.read(buffer, 0, bufferSize);
-
-            if (bufferReadResult == AudioRecord.ERROR_INVALID_OPERATION
-                    || bufferReadResult == AudioRecord.ERROR_BAD_VALUE) {
-                Log.i(this.toString(), "Err@ Write Raw data to Buffer");
-                throw new IllegalArgumentException("device not support this sample rate");
-            }
-
-            //System.out.println("after bufferRead");
-            for (int i = 0; i < bufferReadResult; i++) {
-                try {
-                    //System.out.println("inside write");
-                    dos.writeShort(buffer[i]);
-                } catch (IOException e) {
-                    e.printStackTrace();
+            if (start) {
+                Count=21;
+                datas=new ArrayList<Integer>();
+                isRecording=true;
+                if(audioTrack!=null)
+                {
+                    //audioTrack.play();
                 }
+                //audioRecord.startRecording();
+                handler1.post(updateThread);
+                handler2.post(printDoge);
+                play.setText("stop");
+                start=false;
             }
-            for (int i = 0; i < buffer.length; i++){
-                System.out.println("Buffer Data: " + buffer[i]);
-                //x[i]=new Complex(buffer[i],0);
+            else
+            {
+                isRecording=false;
+                handler1.removeCallbacks(updateThread);
+                //handler2.removeCallbacks(printDoge);
+                //audioTrack.pause();
+                //audioRecord.stop();
+                play.setText("start");
+                //cal();
+                //play();
+                start=true;
             }
         }
-
-
-
-        //Complex[] y=fft(x);
-        //file = new File(getFilesDir().getAbsolutePath() + "/fftResult.txt");
-        //os = new FileOutputStream(file);
-        //bos = new BufferedOutputStream(os);
-        //dos = new DataOutputStream(bos);
-        /**
-        for (int i = 0; i < bufferSize; i++) {
-            try {
-                //System.out.println("inside write");
-                dos.writeDouble(y[i].abs());
-                int value=Integer.valueOf((int) Math.round(y[i].abs()));
-                value=value/1000;
-                datas.add(value);
-                System.out.println("value: " + value+" size: "+i);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            //System.out.println("complex Data: " + y[i]);
-        }
-         **/
 
     }
+    Runnable updateThread = new Runnable()
+    {
+        public void run()
+        {
+            /*
+            Complex[] x=new Complex[bufferSize];
+            short[] buffer = new short[bufferSize];
+            int count=0;
+            while (isRecording) {
+                int bufferReadResult = audioRecord.read(buffer, 0, bufferSize);
+                for (int i = 0; i < bufferReadResult; i++) {
+                    long l = buffer[i];
+                    realData.add(l);
+                }
+                count++;
+                if (count <= 30) {
+                    System.out.println("count :" + count);
+                } else {
+                    datas = new ArrayList<Integer>();
+                    count = 0;
+                    for (int i = 0; i < buffer.length; i++) {
+                        x[i] = new Complex(buffer[i], 0);
+                    }
+                    Complex[] y = fft(x);
+
+                    for (int i = 0; i < y.length; i++) {
+                        int value = Integer.valueOf((int) Math.round(y[i].abs()));
+                        value = value / 1000;
+                        //System.out.println("value: "+value+" size: "+i+" data size: "+datas.size()+" buffer size: "+buffer.length);
+                        datas.add(value);
+                    }
+                    right = !right;
+                }
+            }
+            */
+            File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/reverseme.txt");
+            // Delete any previous recording.
+            if (file.exists())
+                file.delete();
+            // Create the new file.
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                text.setText("file failed created");
+                throw new IllegalStateException("Failed to create " + file.toString());
+            }
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to create " + file.toString());
+            }
+            try {
+                // Create a DataOuputStream to write the audio data into the saved file.
+                OutputStream os = new FileOutputStream(file);
+                BufferedOutputStream bos = new BufferedOutputStream(os);
+                DataOutputStream dos = new DataOutputStream(bos);
+                short[] buffer = new short[bufferSize];
+                audioRecord.startRecording();
+
+                Complex[] x=new Complex[bufferSize];
+
+                while (isRecording) {
+                    int bufferReadResult = audioRecord.read(buffer, 0, bufferSize);
+                    for (int i = 0; i < bufferReadResult; i++)
+                    {
+                        dos.writeShort(buffer[i]);
+                        //x[i] = new Complex(buffer[i], 0);
+                    }
+
+                    /*
+
+                    if(Count<5)
+                    {
+                        Count++;
+                        System.out.print(Count);
+
+                    }
+                    else
+                    {
+                        realData=new ArrayList<Double>();
+                        for (int i = 0; i < buffer.length; i++)
+                        {
+                            x[i] = new Complex(buffer[i], 0);
+                        }
+                        Complex[] y = fft(x);
+                        for (int i = 0; i < y.length; i++) {
+                            double value = y[i].abs();
+                            //dos.writeDouble(value);
+                            realData.add(value);
+                        }
+
+                        intense1=0;
+                        intense2=0;
+                        for(int i=0+band;i<300+band;i++)
+                        {
+                            intense1+=realData.get(i);
+
+                            if(intense1<realData.get(i))
+                                intense1=realData.get(i);
+
+                        }
+                        for(int i=300+band;i<600+band;i++)
+                        {
+                            intense2+=realData.get(i);
+                            /*
+                            if(intense2<realData.get(i))
+                                intense2=realData.get(i);
+
+                        }
+                        intense1=intense1/300;
+                        intense2=intense2/300;
+                        dif=intense1/intense2;
+
+                        if(intense1>=1200)
+                            right=!right;
+
+                        Count=0;
+                    }*/
+
+
+                    /*
+                    //realData=new ArrayList<Double>();
+                    for (int i = 0; i < buffer.length; i++)
+                    {
+                        x[i] = new Complex(buffer[i], 0);
+                    }
+                    Complex[] y = fft(x);
+                    for (int i = 0; i < y.length; i++) {
+                        double value = y[i].abs();
+                        //dos.writeDouble(value);
+                        //realData.add(value);
+                    }
+                    */
+
+
+                }
+                audioRecord.stop();
+                dos.close();
+            } catch (Throwable t) {
+                //text.setText("Recording Failed");
+            }
+        }
+    };
+
+
+
+    Runnable printDoge = new Runnable(){
+        public void run(){
+            //text.setText("checking position of doge !!!!");
+            //System.out.println("checking position of doge !!!!");
+            if (right) {
+                text.setText("doge face right " +dif+"," +(int)intense1+","+(int)intense2);
+                //setContentView(R.layout.dogeright);
+            } else {
+                text.setText("doge face left "+dif+"," +(int)intense1+","+(int)intense2);
+                //setContentView(R.layout.dogeleft);
+            }
+            handler2.postDelayed(printDoge, 1);
+
+
+        }
+    };
+
+
+    class sendButtonListener implements View.OnClickListener
+    {
+        public void onClick(View v)
+        {
+            String[] reciver = new String[] { "xruan@wisc.edu" };
+            String[] mySbuject = new String[] { "test audio" };
+            String myCc = "cc";
+            String mybody = realData.toString();
+            Intent intent = new Intent(android.content.Intent.ACTION_SEND);
+            intent.setType("plain/text");
+            intent.putExtra(android.content.Intent.EXTRA_EMAIL, reciver);
+            intent.putExtra(android.content.Intent.EXTRA_CC, myCc);
+            intent.putExtra(android.content.Intent.EXTRA_SUBJECT, mySbuject);
+            //intent.putExtra(android.content.Intent.EXTRA_TEXT, mybody);
+
+            //intent.putExtra(Intent.EXTRA_STREAM, new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/reverseme.pcm"));
+
+            startActivity(Intent.createChooser(intent, "mail test"));
+
+        }
+    }
+
 
     /**
      *  Author: Kefei Fu
@@ -271,22 +375,52 @@ public class MainActivity extends AppCompatActivity {
         return y;
     }
 
-    /**
-     *
-     * Author: Kefei Fu
-     * Function: sine wave generator
-     * @param wave
-     * @param waveLen
-     * @param length
-     * @return
-     */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
 
-    public static byte[] sin(byte[] wave, int waveLen, int length)
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item)
+    {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings)
+        {
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    public void sin(byte[] wave, int waveLen, int length)
     {
         for (int i = 0; i < length; i++) {
+            double angle = 2*Math.PI*i/waveLen;
+            wave[i]=(byte)(Math.sin(angle)*127f);
+            /*
             wave[i] = (byte) (HEIGHT * (1 - Math.sin(TWOPI
-                    * ((i % waveLen) * 1.00 / waveLen))));
+                    ((i % waveLen) * 1.00 / waveLen))));
+                    */
         }
-        return wave;
+        int idx = 0;
+        for (final double dVal : wave) {
+            // scale to maximum amplitude
+            final short val = (short) ((dVal * 32767));
+            // in 16 bit wav PCM, first byte is the low order byte
+            generatedSnd[idx++] = (byte) (val & 0x00ff);
+            generatedSnd[idx++] = (byte) ((val & 0xff00) >>> 8);
+
+        }
+
     }
+
+
 }
