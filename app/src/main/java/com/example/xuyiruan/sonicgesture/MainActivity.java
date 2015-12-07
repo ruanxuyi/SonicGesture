@@ -43,6 +43,7 @@ public class MainActivity extends AppCompatActivity
     public Button sendEmail;
     public View view;
     public TextView text;
+    public TextView statusText;
     public AudioTrack audioTrack;
     public int Hz;
     public int waveLen;
@@ -65,16 +66,17 @@ public class MainActivity extends AppCompatActivity
     public double intense1=0;
     public double intense2=0;
     public double dif=0;
-    public int band =7500;
+    public double sig = 0;
+    public String sig_str;
+    public int band =3344;
 
     public static boolean right;
 
     protected void onCreate(Bundle savedInstanceState)
     {
-        System.out.println("here");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Hz=14000;
+        Hz=18002;//real frequency 18001.75
         waveLen = 44100/ Hz;
         length = 44100*80;
         sampleRate=44100;
@@ -87,9 +89,12 @@ public class MainActivity extends AppCompatActivity
 
         sendEmail = (Button)findViewById(R.id.sendEmail);
         sendEmail.setOnClickListener(new sendButtonListener());
-        text =(TextView) findViewById(R.id.text);
 
-        bufferSize = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        //view = findViewById(R.id.view);
+        text =(TextView) findViewById(R.id.text);
+        statusText = (TextView) findViewById(R.id.textView2);
+        //bufferSize = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        bufferSize = 8192;
         audioRecord = new AudioRecord(
                 MediaRecorder.AudioSource.MIC,
                 sampleRate,
@@ -124,7 +129,7 @@ public class MainActivity extends AppCompatActivity
                 isRecording=true;
                 if(audioTrack!=null)
                 {
-                    //audioTrack.play();
+                    audioTrack.play();
                 }
                 //audioRecord.startRecording();
                 handler1.post(updateThread);
@@ -137,7 +142,7 @@ public class MainActivity extends AppCompatActivity
                 isRecording=false;
                 handler1.removeCallbacks(updateThread);
                 //handler2.removeCallbacks(printDoge);
-                //audioTrack.pause();
+                audioTrack.pause();
                 //audioRecord.stop();
                 play.setText("start");
                 //cal();
@@ -207,18 +212,20 @@ public class MainActivity extends AppCompatActivity
                 audioRecord.startRecording();
 
                 Complex[] x=new Complex[bufferSize];
+                boolean detected = false;//NEWLY ADDED
+                long lastTime = 0;
 
                 while (isRecording) {
                     int bufferReadResult = audioRecord.read(buffer, 0, bufferSize);
                     for (int i = 0; i < bufferReadResult; i++)
                     {
-                        dos.writeShort(buffer[i]);
-                        //x[i] = new Complex(buffer[i], 0);
+                        //dos.writeShort(buffer[i]);
+                        x[i] = new Complex(buffer[i], 0);
                     }
 
-                    /*
 
-                    if(Count<5)
+
+                    if(Count<2)
                     {
                         Count++;
                         System.out.print(Count);
@@ -240,7 +247,7 @@ public class MainActivity extends AppCompatActivity
 
                         intense1=0;
                         intense2=0;
-                        for(int i=0+band;i<300+band;i++)
+                        for(int i=band-30;i<band;i++)
                         {
                             intense1+=realData.get(i);
 
@@ -248,23 +255,63 @@ public class MainActivity extends AppCompatActivity
                                 intense1=realData.get(i);
 
                         }
-                        for(int i=300+band;i<600+band;i++)
+                        //TODO modified band calculation
+                        for(int i=band+1;i<31+band;i++)
                         {
                             intense2+=realData.get(i);
-                            /*
+
                             if(intense2<realData.get(i))
                                 intense2=realData.get(i);
 
                         }
-                        intense1=intense1/300;
-                        intense2=intense2/300;
+                        intense1=intense1/30;
+                        intense2=intense2/30;
                         dif=intense1/intense2;
+
+
+                        if (intense1+intense2>=10000&&(!detected))
+                        {
+                            double dif_temp = dif;
+                            //TODO Change Threshold of gesture
+                            if (dif_temp < 0.6)//||dif>1.7)
+                            {
+                                lastTime = System.currentTimeMillis();
+
+                                sig = dif;
+                                sig_str = "closer"+dif;
+                                detected = true;
+                                //System.out.println("left");
+
+                            } else if (dif_temp > 2.0)
+                            {
+                                lastTime = System.currentTimeMillis();
+
+                                sig = dif;
+                                sig_str = "further"+dif;
+                                detected = true;
+                                //System.out.println("right");
+                            }
+                            else
+                            {
+                                sig_str = "no gesture";
+                            }
+
+                        }
+                        else if (intense1+intense2<8000)
+                        {
+                            sig_str = "no ultrasound";
+                        }
+                        if (System.currentTimeMillis()-lastTime>1500&&detected)
+                        {
+                            System.out.println("here set false");
+                            detected = false;
+                        }
 
                         if(intense1>=1200)
                             right=!right;
 
                         Count=0;
-                    }*/
+                    }
 
 
                     /*
@@ -290,13 +337,14 @@ public class MainActivity extends AppCompatActivity
             }
         }
     };
-
+    
 
 
     Runnable printDoge = new Runnable(){
         public void run(){
             //text.setText("checking position of doge !!!!");
             //System.out.println("checking position of doge !!!!");
+            statusText.setText(sig_str);
             if (right) {
                 text.setText("doge face right " +dif+"," +(int)intense1+","+(int)intense2);
                 //setContentView(R.layout.dogeright);
@@ -315,7 +363,7 @@ public class MainActivity extends AppCompatActivity
     {
         public void onClick(View v)
         {
-            String[] reciver = new String[] { "xruan@wisc.edu" };
+            String[] reciver = new String[] { "wmao7@wisc.edu" };
             String[] mySbuject = new String[] { "test audio" };
             String myCc = "cc";
             String mybody = realData.toString();

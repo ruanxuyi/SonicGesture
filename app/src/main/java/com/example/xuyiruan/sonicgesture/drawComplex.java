@@ -4,18 +4,17 @@ package com.example.xuyiruan.sonicgesture;
  * Created by kofe on 10/25/15.
  */
 
-        import java.util.ArrayList;
-        import java.util.List;
-        import java.util.Random;
-
-        import android.content.Context;
-        import android.graphics.Canvas;
-        import android.graphics.Color;
-        import android.graphics.Paint;
-        import android.os.Handler;
-        import android.os.Message;
-        import android.util.AttributeSet;
-        import android.view.View;
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.os.Handler;
+import android.os.Message;
+import android.util.AttributeSet;
+import android.view.View;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 
 public class drawComplex extends View{
@@ -54,14 +53,14 @@ public class drawComplex extends View{
             public void run() {
                 while(true){
                     try {
-                        Thread.sleep(100);
+                        Thread.sleep(10);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    if(data.size() >= MaxDataSize){
-                        data.remove(0);
+                    if(MainActivity.datas.size() >= MaxDataSize){
+                        MainActivity.datas.remove(0);
                     }
-                    //data.add(new Random().nextInt(4) + 1);
+                    MainActivity.datas.add(1);
                     handler.sendEmptyMessage(0x1234);
                 }
             }
@@ -92,11 +91,11 @@ public class drawComplex extends View{
 
         //draw x aix
         canvas.drawLine(XPoint, YPoint, XPoint + XLength, YPoint, paint);
-        System.out.println("Data.size = " + data.size());
-        if(data.size() > 1){
-            for(int i=1; i<data.size(); i++){
-                canvas.drawLine(XPoint + (i-1) * XScale, YPoint - data.get(i-1) * YScale,
-                        XPoint + i * XScale, YPoint - data.get(i) * YScale, paint);
+        //System.out.println("Data.size = " + data.size()+" Datas.size = "+MainActivity.datas.size());
+        if(MainActivity.datas.size() > 1){
+            for(int i=1; i<MainActivity.datas.size(); i++){
+                canvas.drawLine(XPoint + (i-1) * XScale, YPoint - MainActivity.datas.get(i-1) * YScale,
+                        XPoint + i * XScale, YPoint - MainActivity.datas.get(i) * YScale, paint);
             }
         }
     }
