@@ -37,7 +37,8 @@ public class MainActivity extends AppCompatActivity
 {
     public static final int HEIGHT = 127;
     /** 2PI**/
-    public static final double TWOPI =  3.1415*2;
+    public static final double Pi = 3.141592653589793238462643383279502884197;
+    public static final double TWOPI =  Pi*2;
     public boolean start=true;
     public Button play;
     public Button sendEmail;
@@ -68,7 +69,7 @@ public class MainActivity extends AppCompatActivity
     public double dif=0;
     public double sig = 0;
     public String sig_str;
-    public int band =3344;
+    public int band =2731 ;//3344
 
     public static boolean right;
 
@@ -76,7 +77,8 @@ public class MainActivity extends AppCompatActivity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Hz=18002;//real frequency 18001.75
+        //Hz=14702;//real frequency 18001.75
+        Hz = 14698;
         waveLen = 44100/ Hz;
         length = 44100*80;
         sampleRate=44100;
@@ -273,7 +275,7 @@ public class MainActivity extends AppCompatActivity
                         {
                             double dif_temp = dif;
                             //TODO Change Threshold of gesture
-                            if (dif_temp < 0.6)//||dif>1.7)
+                            if (dif_temp < 1.25)//||dif>1.7)
                             {
                                 lastTime = System.currentTimeMillis();
 
@@ -282,7 +284,7 @@ public class MainActivity extends AppCompatActivity
                                 detected = true;
                                 //System.out.println("left");
 
-                            } else if (dif_temp > 2.0)
+                            } else if (dif_temp > 1.4)
                             {
                                 lastTime = System.currentTimeMillis();
 
@@ -297,11 +299,11 @@ public class MainActivity extends AppCompatActivity
                             }
 
                         }
-                        else if (intense1+intense2<8000)
+                        else if (intense1+intense2<10000)
                         {
                             sig_str = "no ultrasound";
                         }
-                        if (System.currentTimeMillis()-lastTime>1500&&detected)
+                        if (System.currentTimeMillis()-lastTime>800&&detected)
                         {
                             System.out.println("here set false");
                             detected = false;
@@ -415,7 +417,7 @@ public class MainActivity extends AppCompatActivity
         // combine
         Complex[] y = new Complex[N];
         for (int k = 0; k < N/2; k++) {
-            double kth = -2 * k * Math.PI / N;
+            double kth = -2 * k * Pi/ N;
             Complex wk = new Complex(Math.cos(kth), Math.sin(kth));
             y[k]       = q[k].plus(wk.times(r[k]));
             y[k + N/2] = q[k].minus(wk.times(r[k]));
@@ -451,7 +453,7 @@ public class MainActivity extends AppCompatActivity
     public void sin(byte[] wave, int waveLen, int length)
     {
         for (int i = 0; i < length; i++) {
-            double angle = 2*Math.PI*i/waveLen;
+            double angle = 2*Pi*i/waveLen;
             wave[i]=(byte)(Math.sin(angle)*127f);
             /*
             wave[i] = (byte) (HEIGHT * (1 - Math.sin(TWOPI
