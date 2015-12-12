@@ -69,7 +69,7 @@ public class MainActivity extends AppCompatActivity
     public double dif=0;
     public double sig = 0;
     public String sig_str;
-    public int band =2731 ;//3344
+    public int band =3344;//3344, 2731
 
     public static boolean right;
 
@@ -77,11 +77,11 @@ public class MainActivity extends AppCompatActivity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        //Hz=14702;//real frequency 18001.75
-        Hz = 14698;
+        //Hz=14698;//real frequency 18001.75
+        Hz = 18002;
         waveLen = 44100/ Hz;
         length = 44100*80;
-        sampleRate=44100;
+        sampleRate = 44100;
         wave = new byte[length];
         generatedSnd = new byte[2 * length];
         sin(wave, waveLen, length);
@@ -121,6 +121,7 @@ public class MainActivity extends AppCompatActivity
 
         right=true;
     }
+
     class playButtonListener implements View.OnClickListener
     {
         public void onClick(View v)
@@ -131,7 +132,7 @@ public class MainActivity extends AppCompatActivity
                 isRecording=true;
                 if(audioTrack!=null)
                 {
-                    audioTrack.play();
+                    //audioTrack.play();
                 }
                 //audioRecord.startRecording();
                 handler1.post(updateThread);
@@ -143,8 +144,8 @@ public class MainActivity extends AppCompatActivity
             {
                 isRecording=false;
                 handler1.removeCallbacks(updateThread);
-                //handler2.removeCallbacks(printDoge);
-                audioTrack.pause();
+                handler2.removeCallbacks(printDoge);
+                //audioTrack.pause();
                 //audioRecord.stop();
                 play.setText("start");
                 //cal();
@@ -154,41 +155,12 @@ public class MainActivity extends AppCompatActivity
         }
 
     }
+
     Runnable updateThread = new Runnable()
     {
         public void run()
         {
-            /*
-            Complex[] x=new Complex[bufferSize];
-            short[] buffer = new short[bufferSize];
-            int count=0;
-            while (isRecording) {
-                int bufferReadResult = audioRecord.read(buffer, 0, bufferSize);
-                for (int i = 0; i < bufferReadResult; i++) {
-                    long l = buffer[i];
-                    realData.add(l);
-                }
-                count++;
-                if (count <= 30) {
-                    System.out.println("count :" + count);
-                } else {
-                    datas = new ArrayList<Integer>();
-                    count = 0;
-                    for (int i = 0; i < buffer.length; i++) {
-                        x[i] = new Complex(buffer[i], 0);
-                    }
-                    Complex[] y = fft(x);
 
-                    for (int i = 0; i < y.length; i++) {
-                        int value = Integer.valueOf((int) Math.round(y[i].abs()));
-                        value = value / 1000;
-                        //System.out.println("value: "+value+" size: "+i+" data size: "+datas.size()+" buffer size: "+buffer.length);
-                        datas.add(value);
-                    }
-                    right = !right;
-                }
-            }
-            */
             File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/reverseme.txt");
             // Delete any previous recording.
             if (file.exists())
@@ -275,7 +247,7 @@ public class MainActivity extends AppCompatActivity
                         {
                             double dif_temp = dif;
                             //TODO Change Threshold of gesture
-                            if (dif_temp < 1.25)//||dif>1.7)
+                            if (dif_temp < 0.9)//||dif>1.7)
                             {
                                 lastTime = System.currentTimeMillis();
 
@@ -284,7 +256,7 @@ public class MainActivity extends AppCompatActivity
                                 detected = true;
                                 //System.out.println("left");
 
-                            } else if (dif_temp > 1.4)
+                            } else if (dif_temp > 1.1)
                             {
                                 lastTime = System.currentTimeMillis();
 
