@@ -95,6 +95,8 @@ public class MainActivity extends AppCompatActivity
         //view = findViewById(R.id.view);
         text =(TextView) findViewById(R.id.text);
         statusText = (TextView) findViewById(R.id.textView2);
+        statusText.setText("PLEASE CLICK START");
+        text.setText("APLICATION STOPED");
         //bufferSize = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
         bufferSize = 8192;
         audioRecord = new AudioRecord(
@@ -129,6 +131,7 @@ public class MainActivity extends AppCompatActivity
             if (start) {
                 Count=21;
                 datas=new ArrayList<Integer>();
+
                 isRecording=true;
                 if(audioTrack!=null)
                 {
@@ -148,6 +151,8 @@ public class MainActivity extends AppCompatActivity
                 //audioTrack.pause();
                 //audioRecord.stop();
                 play.setText("start");
+                statusText.setText("PLEASE CLICK START");
+                text.setText("APLICATION STOPED");
                 //cal();
                 //play();
                 start=true;
@@ -172,11 +177,7 @@ public class MainActivity extends AppCompatActivity
                 text.setText("file failed created");
                 throw new IllegalStateException("Failed to create " + file.toString());
             }
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                throw new IllegalStateException("Failed to create " + file.toString());
-            }
+
             try {
                 // Create a DataOuputStream to write the audio data into the saved file.
                 OutputStream os = new FileOutputStream(file);
@@ -187,7 +188,7 @@ public class MainActivity extends AppCompatActivity
 
                 Complex[] x=new Complex[bufferSize];
                 boolean detected = false;//NEWLY ADDED
-                long lastTime = 0;
+                long lastTime = System.currentTimeMillis();
 
                 while (isRecording) {
                     int bufferReadResult = audioRecord.read(buffer, 0, bufferSize);
@@ -247,7 +248,7 @@ public class MainActivity extends AppCompatActivity
                         {
                             double dif_temp = dif;
                             //TODO Change Threshold of gesture
-                            if (dif_temp < 0.9)//||dif>1.7)
+                            if (dif_temp < 1) // 0.9
                             {
                                 lastTime = System.currentTimeMillis();
 
@@ -255,19 +256,38 @@ public class MainActivity extends AppCompatActivity
                                 sig_str = "closer"+dif;
                                 detected = true;
                                 //System.out.println("left");
-
-                            } else if (dif_temp > 1.1)
-                            {
                                 lastTime = System.currentTimeMillis();
+
+                            } else if (dif_temp > 2) //1.1
+                            {
+                                //lastTime = System.currentTimeMillis();
 
                                 sig = dif;
                                 sig_str = "further"+dif;
                                 detected = true;
                                 //System.out.println("right");
+                                lastTime = System.currentTimeMillis();
                             }
                             else
                             {
                                 sig_str = "no gesture";
+                                long expired = System.currentTimeMillis() - lastTime;
+                                // deactive sensors if no gesture for 10 seconds
+                                if (expired > 10000) {
+                                    System.out.println("sleep_start ...");
+                                    isRecording=false;
+
+                                    //handler1.removeCallbacks(updateThread);
+
+                                    //play.setText("start");
+                                    //start=true;
+                                    System.out.println("sleep_done ...");
+                                    sig_str = "GO TO SLEEP@";
+                                    //handler2.removeCallbacks(printDoge);
+                                    //audioTrack.pause();
+                                    //System.out.println("sleep_down ...");
+                                }
+
                             }
 
                         }
@@ -306,6 +326,8 @@ public class MainActivity extends AppCompatActivity
                 }
                 audioRecord.stop();
                 dos.close();
+
+                System.out.println("recording stoped");
             } catch (Throwable t) {
                 //text.setText("Recording Failed");
             }
@@ -327,8 +349,6 @@ public class MainActivity extends AppCompatActivity
                 //setContentView(R.layout.dogeleft);
             }
             handler2.postDelayed(printDoge, 1);
-
-
         }
     };
 
