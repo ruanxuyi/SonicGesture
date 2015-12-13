@@ -5,10 +5,9 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
-import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.HandlerThread;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -16,9 +15,8 @@ import android.view.MenuItem;
 import android.media.AudioManager;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
-
+import java.lang.Object;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -53,8 +51,8 @@ public class MainActivity extends AppCompatActivity
     public byte[] generatedSnd;
     public int sampleRate;
     public AudioRecord audioRecord;
-    HandlerThread thread;
-    Handler handler1;
+    private Thread thread;
+
     Handler handler2=new Handler();
 
 
@@ -71,9 +69,27 @@ public class MainActivity extends AppCompatActivity
     public String sig_str;
     public int band =3344;//3344, 2731
 
+    private static final int MSG_SLEEP = 1;
+
     public static boolean right;
 
-    protected void onCreate(Bundle savedInstanceState)
+    private Handler handler1 = new Handler(){
+        public void handleMessage (Message msg) {//此方法在ui线程运行
+            switch(msg.what) {
+                case MSG_SLEEP:
+                    statusText.setText("Energy Saver Mode");
+                    text.setText("Click Start Button");
+                    play.setText("Start");
+                    start=true;
+                    //handler1.removeCallbacks(updateThread);
+                    handler2.removeCallbacks(printDoge);
+                    break;
+            }
+        }
+    };
+
+    @Override
+    public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -117,9 +133,7 @@ public class MainActivity extends AppCompatActivity
 
         audioTrack.write(generatedSnd, 0, generatedSnd.length);
         audioTrack.setLoopPoints(0, length / 4, -1);
-        thread=new HandlerThread("jjj");
-        thread.start();
-        handler1 =new Handler(thread.getLooper());
+
 
         right=true;
     }
@@ -138,7 +152,9 @@ public class MainActivity extends AppCompatActivity
                     //audioTrack.play();
                 }
                 //audioRecord.startRecording();
-                handler1.post(updateThread);
+                //handler1.post(updateThread);
+                thread=new Thread(updateThread);
+                thread.start();
                 handler2.post(printDoge);
                 play.setText("stop");
                 start=false;
@@ -146,8 +162,10 @@ public class MainActivity extends AppCompatActivity
             else
             {
                 isRecording=false;
-                handler1.removeCallbacks(updateThread);
+                //handler1.removeCallbacks(updateThread);
+
                 handler2.removeCallbacks(printDoge);
+
                 //audioTrack.pause();
                 //audioRecord.stop();
                 play.setText("start");
@@ -163,6 +181,7 @@ public class MainActivity extends AppCompatActivity
 
     Runnable updateThread = new Runnable()
     {
+        @Override
         public void run()
         {
 
@@ -189,6 +208,7 @@ public class MainActivity extends AppCompatActivity
                 Complex[] x=new Complex[bufferSize];
                 boolean detected = false;//NEWLY ADDED
                 long lastTime = System.currentTimeMillis();
+                long expired = 0;
 
                 while (isRecording) {
                     int bufferReadResult = audioRecord.read(buffer, 0, bufferSize);
@@ -247,42 +267,45 @@ public class MainActivity extends AppCompatActivity
                         if (intense1+intense2>=10000&&(!detected))
                         {
                             double dif_temp = dif;
+                            String dif_val = dif + "";
+                            dif_val = dif_val.substring(0,3);
                             //TODO Change Threshold of gesture
-                            if (dif_temp < 1) // 0.9
+                            if (dif_temp < 0.9) // 0.9
                             {
                                 lastTime = System.currentTimeMillis();
 
-                                sig = dif;
-                                sig_str = "closer"+dif;
+                                //sig = dif;
+                                sig_str = "CLOSER [Ratio: "+dif_val + "]";
                                 detected = true;
                                 //System.out.println("left");
                                 lastTime = System.currentTimeMillis();
 
-                            } else if (dif_temp > 2) //1.1
+                            } else if (dif_temp > 1.1) //1.1
                             {
                                 //lastTime = System.currentTimeMillis();
 
-                                sig = dif;
-                                sig_str = "further"+dif;
+                                //sig = dif;
+                                sig_str = "FURTHER [Ratio: "+dif_val + "]";
                                 detected = true;
                                 //System.out.println("right");
                                 lastTime = System.currentTimeMillis();
                             }
                             else
                             {
-                                sig_str = "no gesture";
-                                long expired = System.currentTimeMillis() - lastTime;
+                                sig_str = "No Gesture Detected";
+                                expired = System.currentTimeMillis() - lastTime;
                                 // deactive sensors if no gesture for 10 seconds
-                                if (expired > 10000) {
+                                // Para: expired = 10000ms -> 10sec
+                                if (expired > 8000) {
                                     System.out.println("sleep_start ...");
                                     isRecording=false;
 
                                     //handler1.removeCallbacks(updateThread);
-
+                                    handler1.obtainMessage(MSG_SLEEP).sendToTarget();
                                     //play.setText("start");
                                     //start=true;
                                     System.out.println("sleep_done ...");
-                                    sig_str = "GO TO SLEEP@";
+                                    //sig_str = "GO TO SLEEP@";
                                     //handler2.removeCallbacks(printDoge);
                                     //audioTrack.pause();
                                     //System.out.println("sleep_down ...");
@@ -293,7 +316,25 @@ public class MainActivity extends AppCompatActivity
                         }
                         else if (intense1+intense2<10000)
                         {
-                            sig_str = "no ultrasound";
+                            sig_str = "No Ultrasound Detected";
+                            expired = System.currentTimeMillis() - lastTime;
+                            // deactive sensors if no gesture for 10 seconds
+                            // Para: expired = 10000ms -> 10sec
+                            if (expired > 8000) {
+                                System.out.println("sleep_start ...");
+                                isRecording=false;
+
+                                //handler1.removeCallbacks(updateThread);
+                                handler1.obtainMessage(MSG_SLEEP).sendToTarget();
+                                //play.setText("start");
+                                //start=true;
+                                System.out.println("sleep_done ...");
+                                //sig_str = "GO TO SLEEP@";
+                                //handler2.removeCallbacks(printDoge);
+                                //audioTrack.pause();
+                                //System.out.println("sleep_down ...");
+                            }
+                            // TODO: add button to play ultrasound seperate.
                         }
                         if (System.currentTimeMillis()-lastTime>800&&detected)
                         {
@@ -306,23 +347,6 @@ public class MainActivity extends AppCompatActivity
 
                         Count=0;
                     }
-
-
-                    /*
-                    //realData=new ArrayList<Double>();
-                    for (int i = 0; i < buffer.length; i++)
-                    {
-                        x[i] = new Complex(buffer[i], 0);
-                    }
-                    Complex[] y = fft(x);
-                    for (int i = 0; i < y.length; i++) {
-                        double value = y[i].abs();
-                        //dos.writeDouble(value);
-                        //realData.add(value);
-                    }
-                    */
-
-
                 }
                 audioRecord.stop();
                 dos.close();
@@ -341,11 +365,14 @@ public class MainActivity extends AppCompatActivity
             //text.setText("checking position of doge !!!!");
             //System.out.println("checking position of doge !!!!");
             statusText.setText(sig_str);
+            String ratio = dif + "";
+            ratio = ratio.substring(0, 3);
             if (right) {
-                text.setText("doge face right " +dif+"," +(int)intense1+","+(int)intense2);
+
+                text.setText("Ratio (L/R): " +ratio);
                 //setContentView(R.layout.dogeright);
             } else {
-                text.setText("doge face left "+dif+"," +(int)intense1+","+(int)intense2);
+                text.setText("Ratio (L/R): "+ratio);
                 //setContentView(R.layout.dogeleft);
             }
             handler2.postDelayed(printDoge, 1);
