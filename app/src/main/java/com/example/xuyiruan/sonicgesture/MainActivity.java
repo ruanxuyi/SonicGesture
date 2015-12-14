@@ -73,6 +73,8 @@ public class MainActivity extends AppCompatActivity
 
     public static boolean right;
 
+
+
     private Handler handler1 = new Handler(){
         public void handleMessage (Message msg) {//此方法在ui线程运行
             switch(msg.what) {
@@ -88,11 +90,17 @@ public class MainActivity extends AppCompatActivity
         }
     };
 
+
+
+
+
     @Override
-    public void onCreate(Bundle savedInstanceState)
+    protected void onCreate(Bundle savedInstanceState)
     {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        System.out.println("Main ACTIVITY ---> " + Thread.currentThread().getId());
         //Hz=14698;//real frequency 18001.75
         Hz = 18002;
         waveLen = 44100/ Hz;
@@ -136,6 +144,18 @@ public class MainActivity extends AppCompatActivity
 
 
         right=true;
+    }
+
+    // added to final version.
+    @Override
+    protected void onPause() {
+        super.onPause();
+        isRecording=false;
+        handler2.removeCallbacks(printDoge);
+        play.setText("start");
+        statusText.setText("PLEASE CLICK START");
+        text.setText("APLICATION PAUSED");
+        start=true;
     }
 
     class playButtonListener implements View.OnClickListener
@@ -185,6 +205,7 @@ public class MainActivity extends AppCompatActivity
         public void run()
         {
 
+            System.out.println("Update_THREAD ---> " + Thread.currentThread().getId());
             File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/reverseme.txt");
             // Delete any previous recording.
             if (file.exists())
@@ -289,12 +310,23 @@ public class MainActivity extends AppCompatActivity
                                 detected = true;
                                 //System.out.println("right");
                                 lastTime = System.currentTimeMillis();
+
+                                // TEST
+                                runOnUiThread(new Runnable() {
+
+                                    @Override
+                                    public void run() {
+                                        System.out.println("runOnUIthread---> " + Thread.currentThread().getId());
+
+                                    }
+                                });
+
                             }
                             else
                             {
                                 sig_str = "No Gesture Detected";
                                 expired = System.currentTimeMillis() - lastTime;
-                                // deactive sensors if no gesture for 10 seconds
+                                // deactive sensors if no gesture for 10 secondsER
                                 // Para: expired = 10000ms -> 10sec
                                 if (expired > 8000) {
                                     System.out.println("sleep_start ...");
@@ -375,7 +407,10 @@ public class MainActivity extends AppCompatActivity
                 text.setText("Ratio (L/R): "+ratio);
                 //setContentView(R.layout.dogeleft);
             }
+            System.out.println("Runnalbe2 ---> " + Thread.currentThread().getId());
+
             handler2.postDelayed(printDoge, 1);
+
         }
     };
 
