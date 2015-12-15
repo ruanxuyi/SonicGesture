@@ -1,14 +1,15 @@
 package com.example.xuyiruan.sonicgesture;
 
+import android.content.Context;
 import android.content.Intent;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
+import android.media.MediaPlayer;
 import android.media.MediaRecorder;
-import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.HandlerThread;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -16,30 +17,27 @@ import android.view.MenuItem;
 import android.media.AudioManager;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.lang.Object;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.io.*;
 
 public class MainActivity extends AppCompatActivity
 {
     public static final int HEIGHT = 127;
-    /** 2PI**/
+    /**
+     * 2PI
+     **/
     public static final double Pi = 3.141592653589793238462643383279502884197;
-    public static final double TWOPI =  Pi*2;
-    public boolean start=true;
+    public static final double TWOPI = Pi * 2;
+    public boolean start = true;
     public Button play;
     public Button sendEmail;
     public View view;
@@ -47,57 +45,76 @@ public class MainActivity extends AppCompatActivity
     public TextView statusText;
     public AudioTrack audioTrack;
     public int Hz;
-    public double waveLen;
-    public int length;
-    public byte[] wave;
-    public byte[] generatedSnd;
+    public int waveLen;
+
+
     public int sampleRate;
     public AudioRecord audioRecord;
-    HandlerThread thread;
-    Handler handler1;
-    Handler handler2=new Handler();
+    private Thread thread;
 
+    Handler handler2 = new Handler();
 
-    public static List<Integer> datas=new ArrayList<Integer>();
-    public ArrayList<Double> realData=new ArrayList<Double>();
-    public int bufferSize=512;
+    public byte wave[];
+    public static List<Integer> datas = new ArrayList<Integer>();
+    public ArrayList<Double> realData = new ArrayList<Double>();
+    public int bufferSize = 512;
     public boolean isRecording;
-    private Object tmp = new Object() ;
+    private Object tmp = new Object();
     public static int Count;
-    public double intense1=0;
-    public double intense2=0;
-    public double dif=0;
+    public double intense1 = 0;
+    public double intense2 = 0;
+    public double dif = 0;
     public double sig = 0;
     public String sig_str;
-    public int band =3344 ;//3344//2731
+    public int band = 3344;//3344, 2731
+
+    public MediaPlayer mediaPlayer;
+    private static final int MSG_SLEEP = 1;
 
     public static boolean right;
-    public static boolean left;
 
+    private Handler handler1 = new Handler()
+    {
+        public void handleMessage(Message msg)
+        {//此方法在ui线程运行
+            switch (msg.what)
+            {
+                case MSG_SLEEP:
+                    statusText.setText("Energy Saver Mode");
+                    text.setText("Click Start Button");
+                    play.setText("Start");
+                    start = true;
+                    //handler1.removeCallbacks(updateThread);
+                    handler2.removeCallbacks(printDoge);
+                    break;
+            }
+        }
+    };
+
+    @Override
     protected void onCreate(Bundle savedInstanceState)
     {
+
+        wave = new byte[44100];       //sound wave buffer
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        //Hz=14702;//real frequency 18001.75
+        //Hz=14698;//real frequency 18001.75
         Hz = 18002;
-        waveLen = 44100/ Hz;
-        length = 44100*80;
-        sampleRate=44100;
-        wave = new byte[length];
-        //generatedSnd = new byte[2 * length];
-        //sin(wave, waveLen, length);
+        waveLen = 44100 / Hz;
 
-        //audioTrack.write(wave, 0, length);
-        play = (Button)findViewById(R.id.button);
+        sampleRate = 44100;
+
+        play = (Button) findViewById(R.id.button);
         play.setOnClickListener(new playButtonListener());
 
-        sendEmail = (Button)findViewById(R.id.sendEmail);
+        sendEmail = (Button) findViewById(R.id.sendEmail);
         sendEmail.setOnClickListener(new sendButtonListener());
 
-        //view = findViewById(R.id.view);
-        text =(TextView) findViewById(R.id.text);
+
+        text = (TextView) findViewById(R.id.text);
         statusText = (TextView) findViewById(R.id.textView2);
-        //bufferSize = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        statusText.setText("PLEASE CLICK START");
+        text.setText("APPLICATION STOPED");
         bufferSize = 8192;
         audioRecord = new AudioRecord(
                 MediaRecorder.AudioSource.MIC,
@@ -105,119 +122,91 @@ public class MainActivity extends AppCompatActivity
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
                 bufferSize);
+
+
         if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED)
             System.out.println("error");
-        /*
-        audioTrack=new AudioTrack(
-                AudioManager.STREAM_MUSIC,
-                sampleRate,
-                AudioFormat.CHANNEL_OUT_MONO, // CHANNEL_CONFIGURATION_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                generatedSnd.length,
-                AudioTrack.MODE_STATIC);
-*/
-        //audioTrack.write(generatedSnd, 0, generatedSnd.length);
-        //audioTrack.setLoopPoints(0, length / 4, -1);
-        thread=new HandlerThread("jjj");
-        thread.start();
-        handler1 =new Handler(thread.getLooper());
 
 
+
+        mediaPlayer= MediaPlayer.create(this, R.raw.sine);
+
+        right = true;
     }
     @Override
-    protected void onPause()
-    {
-        super.onPause();
-        //audioTrack.pause();
-        handler1.removeCallbacks(updateThread);
-    }
-
-
+        protected void onPause() {
+            super.onPause();
+            isRecording=false;
+            handler2.removeCallbacks(printDoge);
+            play.setText("start");
+            statusText.setText("PLEASE CLICK START");
+            text.setText("APPLICATION PAUSED");
+            start=true;
+        }
     class playButtonListener implements View.OnClickListener
     {
         public void onClick(View v)
         {
-            if (start) {
-                Count=21;
-                datas=new ArrayList<Integer>();
-                isRecording=true;
-                //if(audioTrack!=null)
-                {
-                    //audioTrack.play();
-                }
-                //audioRecord.startRecording();
-                handler1.post(updateThread);
-                //handler2.post(printDoge);
-                play.setText("stop");
-                start=false;
-            }
-            else
+            if (start)
             {
-                isRecording=false;
-                handler1.removeCallbacks(updateThread);
-                //handler2.removeCallbacks(printDoge);
-                //audioTrack.pause();
-                //audioRecord.stop();
+                Count = 21;
+                datas = new ArrayList<Integer>();
+
+                isRecording = true;
+                if (mediaPlayer != null)
+                {
+
+                    mediaPlayer.setLooping(true);
+                    mediaPlayer.start();
+
+                }
+
+                thread = new Thread(updateThread);
+                thread.start();
+                handler2.post(printDoge);
+                play.setText("stop");
+                start = false;
+            } else
+            {
+                isRecording = false;
+
+
+                handler2.removeCallbacks(printDoge);
+
+                mediaPlayer.pause();
+
                 play.setText("start");
-                //cal();
-                //play();
-                start=true;
+                statusText.setText("PLEASE CLICK START");
+                text.setText("APLICATION STOPED");
+
+                start = true;
             }
         }
 
     }
+
     Runnable updateThread = new Runnable()
     {
+        @Override
         public void run()
         {
-            /*
-            Complex[] x=new Complex[bufferSize];
-            short[] buffer = new short[bufferSize];
-            int count=0;
-            while (isRecording) {
-                int bufferReadResult = audioRecord.read(buffer, 0, bufferSize);
-                for (int i = 0; i < bufferReadResult; i++) {
-                    long l = buffer[i];
-                    realData.add(l);
-                }
-                count++;
-                if (count <= 30) {
-                    System.out.println("count :" + count);
-                } else {
-                    datas = new ArrayList<Integer>();
-                    count = 0;
-                    for (int i = 0; i < buffer.length; i++) {
-                        x[i] = new Complex(buffer[i], 0);
-                    }
-                    Complex[] y = fft(x);
 
-                    for (int i = 0; i < y.length; i++) {
-                        int value = Integer.valueOf((int) Math.round(y[i].abs()));
-                        value = value / 1000;
-                        //System.out.println("value: "+value+" size: "+i+" data size: "+datas.size()+" buffer size: "+buffer.length);
-                        datas.add(value);
-                    }
-                    right = !right;
-                }
-            }
-            */
             File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/reverseme.txt");
             // Delete any previous recording.
             if (file.exists())
                 file.delete();
             // Create the new file.
-            try {
+            try
+            {
                 file.createNewFile();
-            } catch (IOException e) {
+            } catch (IOException e)
+            {
                 text.setText("file failed created");
                 throw new IllegalStateException("Failed to create " + file.toString());
             }
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                throw new IllegalStateException("Failed to create " + file.toString());
-            }
-            try {
+
+            try
+            {
                 // Create a DataOuputStream to write the audio data into the saved file.
                 OutputStream os = new FileOutputStream(file);
                 BufferedOutputStream bos = new BufferedOutputStream(os);
@@ -225,11 +214,13 @@ public class MainActivity extends AppCompatActivity
                 short[] buffer = new short[bufferSize];
                 audioRecord.startRecording();
 
-                Complex[] x=new Complex[bufferSize];
+                Complex[] x = new Complex[bufferSize];
                 boolean detected = false;//NEWLY ADDED
-                long lastTime = 0;
-                long lastGestureTime = System.currentTimeMillis();
-                while (isRecording) {
+                long lastTime = System.currentTimeMillis();
+                long expired = 0;
+
+                while (isRecording)
+                {
                     int bufferReadResult = audioRecord.read(buffer, 0, bufferSize);
                     for (int i = 0; i < bufferReadResult; i++)
                     {
@@ -238,156 +229,155 @@ public class MainActivity extends AppCompatActivity
                     }
 
 
-
-                    if(Count<2)
+                    if (Count < 2)
                     {
                         Count++;
                         System.out.print(Count);
 
-                    }
-                    else
+                    } else
                     {
-                        realData=new ArrayList<Double>();
+                        realData = new ArrayList<Double>();
                         for (int i = 0; i < buffer.length; i++)
                         {
                             x[i] = new Complex(buffer[i], 0);
                         }
                         Complex[] y = fft(x);
-                        for (int i = 0; i < y.length; i++) {
+                        for (int i = 0; i < y.length; i++)
+                        {
                             double value = y[i].abs();
                             //dos.writeDouble(value);
                             realData.add(value);
                         }
 
-                        intense1=0;
-                        intense2=0;
-                        for(int i=band-30;i<band;i++)
+                        intense1 = 0;
+                        intense2 = 0;
+                        for (int i = band - 30; i < band; i++)
                         {
-                            intense1+=realData.get(i);
+                            intense1 += realData.get(i);
 
-                            if(intense1<realData.get(i))
-                                intense1=realData.get(i);
+                            if (intense1 < realData.get(i))
+                                intense1 = realData.get(i);
 
                         }
                         //TODO modified band calculation
-                        for(int i=band+1;i<31+band;i++)
+                        for (int i = band + 1; i < 31 + band; i++)
                         {
-                            intense2+=realData.get(i);
+                            intense2 += realData.get(i);
 
-                            if(intense2<realData.get(i))
-                                intense2=realData.get(i);
+                            if (intense2 < realData.get(i))
+                                intense2 = realData.get(i);
 
                         }
-                        intense1=intense1/30;
-                        intense2=intense2/30;
-                        dif=intense1/intense2;
+                        intense1 = intense1 / 30;
+                        intense2 = intense2 / 30;
+                        dif = intense1 / intense2;
 
 
-                        if (intense1+intense2>=10000&&(!detected))
+                        if (intense1 + intense2 >= 10000 && (!detected))
                         {
                             double dif_temp = dif;
+                            String dif_val = dif + "";
+                            dif_val = dif_val.substring(0, 3);
                             //TODO Change Threshold of gesture
-                            if (dif_temp < 1.25)//||dif>1.7)
+                            if (dif_temp < 0.9) // 0.9
                             {
                                 lastTime = System.currentTimeMillis();
-                                left = true;
-                                right = false;
-                                sig = dif;
-                                sig_str = "closer"+dif;
-                                detected = true;
-                                lastGestureTime = System.currentTimeMillis();
-                                //System.out.println("left");
 
-                            } else if (dif_temp > 1.4)
-                            {
+                                //sig = dif;
+                                sig_str = "CLOSER [Ratio: " + dif_val + "]";
+                                detected = true;
+
                                 lastTime = System.currentTimeMillis();
-                                right = true;
-                                left = false;
-                                sig = dif;
-                                sig_str = "further"+dif;
-                                detected = true;
-                                lastGestureTime = System.currentTimeMillis();
-                                //System.out.println("right");
-                            }
-                            else
+
+                            } else if (dif_temp > 1.1) //1.1
                             {
-                                right = false;
-                                left = false;
-                                sig_str = "no gesture";
+
+                                sig_str = "FURTHER [Ratio: " + dif_val + "]";
+                                detected = true;
+
+                                lastTime = System.currentTimeMillis();
+                            } else
+                            {
+                                sig_str = "No Gesture Detected";
+                                expired = System.currentTimeMillis() - lastTime;
+                                // deactive sensors if no gesture for 10 seconds
+                                // Para: expired = 10000ms -> 10sec
+                                if (expired > 8000)
+                                {
+                                    System.out.println("sleep_start ...");
+                                    isRecording = false;
+
+
+                                    handler1.obtainMessage(MSG_SLEEP).sendToTarget();
+
+                                    System.out.println("sleep_done ...");
+
+                                }
+
                             }
 
-                        }
-                        else if (intense1+intense2<10000)
+                        } else if (intense1 + intense2 < 10000)
                         {
-                            sig_str = "no ultrasound";
+                            sig_str = "No Ultrasound Detected";
+                            expired = System.currentTimeMillis() - lastTime;
+                            // deactive sensors if no gesture for 10 seconds
+                            // Para: expired = 10000ms -> 10sec
+                            if (expired > 8000)
+                            {
+                                System.out.println("sleep_start ...");
+                                isRecording = false;
+
+                                //handler1.removeCallbacks(updateThread);
+                                handler1.obtainMessage(MSG_SLEEP).sendToTarget();
+
+                                System.out.println("sleep_done ...");
+
+                            }
+                            // TODO: add button to play ultrasound seperate.
                         }
-                        if (System.currentTimeMillis()-lastTime>800&&detected)
+                        if (System.currentTimeMillis() - lastTime > 800 && detected)
                         {
                             System.out.println("here set false");
                             detected = false;
                         }
 
-                        if (System.currentTimeMillis()-lastGestureTime>=10000)
-                        {
-                            text.setText("Paused, Power Saving Mode");
+                        if (intense1 >= 1200)
+                            right = !right;
 
-                            //auto stop ultrasound and recording functions
-                            isRecording=false;
-                            //audioTrack.pause();
-                            play.setText("start");
-                            start=true;
-                            handler1.removeCallbacks(updateThread);
-
-                        }
-                        Count=0;
+                        Count = 0;
                     }
-
-
-                    /*
-                    //realData=new ArrayList<Double>();
-                    for (int i = 0; i < buffer.length; i++)
-                    {
-                        x[i] = new Complex(buffer[i], 0);
-                    }
-                    Complex[] y = fft(x);
-                    for (int i = 0; i < y.length; i++) {
-                        double value = y[i].abs();
-                        //dos.writeDouble(value);
-                        //realData.add(value);
-                    }
-                    */
-
-
                 }
                 audioRecord.stop();
                 dos.close();
-            } catch (Throwable t) {
+
+                System.out.println("recording stoped");
+            } catch (Throwable t)
+            {
                 //text.setText("Recording Failed");
             }
         }
     };
-    
 
 
-    Runnable printDoge = new Runnable(){
-        public void run(){
-            //text.setText("checking position of doge !!!!");
-            //System.out.println("checking position of doge !!!!");
+    Runnable printDoge = new Runnable()
+    {
+        public void run()
+        {
+
             statusText.setText(sig_str);
-            if (right) {
-                text.setText("doge face right " +dif+"," +(int)intense1+","+(int)intense2);
+            String ratio = dif + "";
+            ratio = ratio.substring(0, 3);
+            if (right)
+            {
+
+                text.setText("Ratio (L/R): " + ratio);
                 //setContentView(R.layout.dogeright);
-            } else if (left) {
-                text.setText("doge face left "+dif+"," +(int)intense1+","+(int)intense2);
+            } else
+            {
+                text.setText("Ratio (L/R): " + ratio);
                 //setContentView(R.layout.dogeleft);
             }
-            else
-            {
-                //setContentView(R.layout.activity_main);
-            }
             handler2.postDelayed(printDoge, 1);
-
-
         }
     };
 
@@ -396,8 +386,8 @@ public class MainActivity extends AppCompatActivity
     {
         public void onClick(View v)
         {
-            String[] reciver = new String[] { "wmao7@wisc.edu" };
-            String[] mySbuject = new String[] { "test audio" };
+            String[] reciver = new String[]{"wmao7@wisc.edu"};
+            String[] mySbuject = new String[]{"test audio"};
             String myCc = "cc";
             String mybody = realData.toString();
             Intent intent = new Intent(android.content.Intent.ACTION_SEND);
@@ -405,9 +395,6 @@ public class MainActivity extends AppCompatActivity
             intent.putExtra(android.content.Intent.EXTRA_EMAIL, reciver);
             intent.putExtra(android.content.Intent.EXTRA_CC, myCc);
             intent.putExtra(android.content.Intent.EXTRA_SUBJECT, mySbuject);
-            //intent.putExtra(android.content.Intent.EXTRA_TEXT, mybody);
-
-            //intent.putExtra(Intent.EXTRA_STREAM, new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/reverseme.pcm"));
 
             startActivity(Intent.createChooser(intent, "mail test"));
 
@@ -416,42 +403,48 @@ public class MainActivity extends AppCompatActivity
 
 
     /**
-     *  Author: Kefei Fu
-     *  Function: do FFT on waveform generated by mic recorder.
-     *
+     * Author: Kefei Fu
+     * Function: do FFT on waveform generated by mic recorder.
      */
-    public static Complex[] fft(Complex[] x) {
+    public static Complex[] fft(Complex[] x)
+    {
 
 
         int N = x.length;
 
         // base case
-        if (N == 1) return new Complex[] { x[0] };
+        if (N == 1) return new Complex[]{x[0]};
 
         // radix 2 Cooley-Tukey FFT
-        if (N % 2 != 0) { throw new RuntimeException("N is not a power of 2"); }
+        if (N % 2 != 0)
+        {
+            throw new RuntimeException("N is not a power of 2");
+        }
 
         // fft of even terms
-        Complex[] even = new Complex[N/2];
-        for (int k = 0; k < N/2; k++) {
-            even[k] = x[2*k];
+        Complex[] even = new Complex[N / 2];
+        for (int k = 0; k < N / 2; k++)
+        {
+            even[k] = x[2 * k];
         }
         Complex[] q = fft(even);
 
         // fft of odd terms
-        Complex[] odd  = even;  // reuse the array
-        for (int k = 0; k < N/2; k++) {
-            odd[k] = x[2*k + 1];
+        Complex[] odd = even;  // reuse the array
+        for (int k = 0; k < N / 2; k++)
+        {
+            odd[k] = x[2 * k + 1];
         }
         Complex[] r = fft(odd);
 
         // combine
         Complex[] y = new Complex[N];
-        for (int k = 0; k < N/2; k++) {
-            double kth = -2 * k * Pi/ N;
+        for (int k = 0; k < N / 2; k++)
+        {
+            double kth = -2 * k * Pi / N;
             Complex wk = new Complex(Math.cos(kth), Math.sin(kth));
-            y[k]       = q[k].plus(wk.times(r[k]));
-            y[k + N/2] = q[k].minus(wk.times(r[k]));
+            y[k] = q[k].plus(wk.times(r[k]));
+            y[k + N / 2] = q[k].minus(wk.times(r[k]));
         }
         return y;
     }
@@ -480,37 +473,6 @@ public class MainActivity extends AppCompatActivity
 
         return super.onOptionsItemSelected(item);
     }
-/*
-    public void sin(byte[] wave, double waveLen, int length)
-    {
-        int count=0;
-        for (int i = 0; i < length; i++) {
-            if(count<(waveLen/2))
-            {
-                wave[i] = (byte) -127f;
-                count++;
-            }
-            else
-            {
-                wave[i] = (byte) 127f;
-                count++;
-                if(count>=waveLen)
-                    count=0;
-            }
 
-
-        }
-        int idx = 0;
-        for (final double dVal : wave) {
-            // scale to maximum amplitude
-            final short val = (short) ((dVal * 32767));
-            // in 16 bit wav PCM, first byte is the low order byte
-            generatedSnd[idx++] = (byte) (val & 0x00ff);
-            generatedSnd[idx++] = (byte) ((val & 0xff00) >>> 8);
-
-        }
-
-    }
-*/
 
 }
