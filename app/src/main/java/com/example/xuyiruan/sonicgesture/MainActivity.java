@@ -80,6 +80,7 @@ public class MainActivity extends AppCompatActivity
             switch (msg.what)
             {
                 case MSG_SLEEP:
+                    mediaPlayer.pause();
                     statusText.setText("Energy Saver Mode");
                     text.setText("Click Start Button");
                     play.setText("Start");
@@ -134,15 +135,17 @@ public class MainActivity extends AppCompatActivity
         right = true;
     }
     @Override
-        protected void onPause() {
-            super.onPause();
-            isRecording=false;
-            handler2.removeCallbacks(printDoge);
-            play.setText("start");
-            statusText.setText("PLEASE CLICK START");
-            text.setText("APPLICATION PAUSED");
-            start=true;
-        }
+    protected void onPause() {
+        super.onPause();
+        isRecording=false;
+        mediaPlayer.pause();
+        handler2.removeCallbacks(printDoge);
+        play.setText("start");
+        statusText.setText("PLEASE CLICK START");
+        text.setText("APPLICATION PAUSED");
+        start=true;
+    }
+
     class playButtonListener implements View.OnClickListener
     {
         public void onClick(View v)
@@ -386,15 +389,14 @@ public class MainActivity extends AppCompatActivity
     {
         public void onClick(View v)
         {
-            String[] reciver = new String[]{"wmao7@wisc.edu"};
-            String[] mySbuject = new String[]{"test audio"};
-            String myCc = "cc";
-            String mybody = realData.toString();
+            String[] reciver = new String[]{"ece454sonicgesture@gmail.com"};
+            String[] mySbuject = new String[]{"Hello SonicGest"};
+            String mybody = "Tell us what you think!";
             Intent intent = new Intent(android.content.Intent.ACTION_SEND);
             intent.setType("plain/text");
             intent.putExtra(android.content.Intent.EXTRA_EMAIL, reciver);
-            intent.putExtra(android.content.Intent.EXTRA_CC, myCc);
             intent.putExtra(android.content.Intent.EXTRA_SUBJECT, mySbuject);
+            intent.putExtra(android.content.Intent.EXTRA_SUBJECT, mybody);
 
             startActivity(Intent.createChooser(intent, "mail test"));
 
