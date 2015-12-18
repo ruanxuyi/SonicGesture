@@ -286,7 +286,7 @@ public class MainActivity extends AppCompatActivity
                             String dif_val = dif + "";
                             dif_val = dif_val.substring(0, 3);
                             //TODO Change Threshold of gesture for better accuracy
-                            if (dif_temp < 0.9) // 0.9
+                            if (dif_temp < 0.9) // threadhold = 0.9 for Galaxy S6
                             {
                                 lastTime = System.currentTimeMillis();
 
@@ -296,7 +296,7 @@ public class MainActivity extends AppCompatActivity
 
                                 lastTime = System.currentTimeMillis();
 
-                            } else if (dif_temp > 1.1) //1.1
+                            } else if (dif_temp > 1.1) // threadhold = 1.1 for Galaxy S6
                             {
 
                                 sig_str = "FURTHER [Ratio: " + dif_val + "]";
