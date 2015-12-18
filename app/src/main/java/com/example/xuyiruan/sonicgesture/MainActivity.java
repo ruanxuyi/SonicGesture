@@ -1,6 +1,5 @@
 package com.example.xuyiruan.sonicgesture;
 
-import android.content.Context;
 import android.content.Intent;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -14,16 +13,12 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.media.AudioManager;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-
 import java.lang.Object;
-
 import java.io.FileOutputStream;
 import java.io.IOException;
-
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,9 +27,6 @@ import java.io.*;
 public class MainActivity extends AppCompatActivity
 {
     public static final int HEIGHT = 127;
-    /**
-     * 2PI
-     **/
     public static final double Pi = 3.141592653589793238462643383279502884197;
     public static final double TWOPI = Pi * 2;
     public boolean start = true;
@@ -64,7 +56,6 @@ public class MainActivity extends AppCompatActivity
     public double intense1 = 0;
     public double intense2 = 0;
     public double dif = 0;
-    public double sig = 0;
     public String sig_str;
     public int band = 3344;//3344, 2731
 
@@ -73,10 +64,15 @@ public class MainActivity extends AppCompatActivity
 
     public static boolean right;
 
+    /**
+     *  message call back from fft processing thread
+     *  this code run directly on UI thread
+     */
+
     private Handler handler1 = new Handler()
     {
         public void handleMessage(Message msg)
-        {//此方法在ui线程运行
+        {
             switch (msg.what)
             {
                 case MSG_SLEEP:
@@ -92,9 +88,13 @@ public class MainActivity extends AppCompatActivity
         }
     };
 
+    /**
+     * Description: tasks perform on startup
+     *
+     * @param savedInstanceState
+     */
     @Override
-    protected void onCreate(Bundle savedInstanceState)
-    {
+    protected void onCreate(Bundle savedInstanceState) {
 
         wave = new byte[44100];       //sound wave buffer
         super.onCreate(savedInstanceState);
@@ -102,7 +102,6 @@ public class MainActivity extends AppCompatActivity
         //Hz=14698;//real frequency 18001.75
         Hz = 18002;
         waveLen = 44100 / Hz;
-
         sampleRate = 44100;
 
         play = (Button) findViewById(R.id.button);
@@ -110,7 +109,6 @@ public class MainActivity extends AppCompatActivity
 
         sendEmail = (Button) findViewById(R.id.sendEmail);
         sendEmail.setOnClickListener(new sendButtonListener());
-
 
         text = (TextView) findViewById(R.id.text);
         statusText = (TextView) findViewById(R.id.textView2);
@@ -124,16 +122,18 @@ public class MainActivity extends AppCompatActivity
                 AudioFormat.ENCODING_PCM_16BIT,
                 bufferSize);
 
-
         if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED)
             System.out.println("error");
 
-
-
-        mediaPlayer= MediaPlayer.create(this, R.raw.sine);
-
+        // setup mediaplayer to play 18k recording file.
+        mediaPlayer = MediaPlayer.create(this, R.raw.sine);
         right = true;
     }
+    /*
+     * Descriptionb: Disable sensors when user put applicatio in backgroud
+     * to save battery.
+     *
+     */
     @Override
     protected void onPause() {
         super.onPause();
@@ -146,22 +146,24 @@ public class MainActivity extends AppCompatActivity
         start=true;
     }
 
+    /*
+     * Descpriton: this method moniter START button activity
+     *
+     */
     class playButtonListener implements View.OnClickListener
     {
         public void onClick(View v)
         {
+            // run codes below when START pushed
             if (start)
             {
                 Count = 21;
                 datas = new ArrayList<Integer>();
-
                 isRecording = true;
                 if (mediaPlayer != null)
                 {
-
                     mediaPlayer.setLooping(true);
                     mediaPlayer.start();
-
                 }
 
                 thread = new Thread(updateThread);
@@ -169,25 +171,26 @@ public class MainActivity extends AppCompatActivity
                 handler2.post(printDoge);
                 play.setText("stop");
                 start = false;
-            } else
-            {
+            } else {
+                // Run code below when STOP clicked
                 isRecording = false;
-
-
+                // remove update message on UI
                 handler2.removeCallbacks(printDoge);
-
+                // stop audio player
                 mediaPlayer.pause();
-
                 play.setText("start");
                 statusText.setText("PLEASE CLICK START");
                 text.setText("APLICATION STOPED");
-
                 start = true;
             }
         }
 
     }
 
+    /*
+     * Description: the updateThread is dedicated for FFT live processing computation
+     *
+     */
     Runnable updateThread = new Runnable()
     {
         @Override
@@ -227,6 +230,7 @@ public class MainActivity extends AppCompatActivity
                     int bufferReadResult = audioRecord.read(buffer, 0, bufferSize);
                     for (int i = 0; i < bufferReadResult; i++)
                     {
+                        // uncommand the line below to active write to file mode
                         //dos.writeShort(buffer[i]);
                         x[i] = new Complex(buffer[i], 0);
                     }
@@ -281,7 +285,7 @@ public class MainActivity extends AppCompatActivity
                             double dif_temp = dif;
                             String dif_val = dif + "";
                             dif_val = dif_val.substring(0, 3);
-                            //TODO Change Threshold of gesture
+                            //TODO Change Threshold of gesture for better accuracy
                             if (dif_temp < 0.9) // 0.9
                             {
                                 lastTime = System.currentTimeMillis();
@@ -362,6 +366,11 @@ public class MainActivity extends AppCompatActivity
     };
 
 
+    /*
+     * Description: printDoge is a thread run on UI thread to
+     * update UI information.
+     *
+     */
     Runnable printDoge = new Runnable()
     {
         public void run()
@@ -385,6 +394,10 @@ public class MainActivity extends AppCompatActivity
     };
 
 
+    /**
+     * Description: set up intent for email feedback
+     *
+     */
     class sendButtonListener implements View.OnClickListener
     {
         public void onClick(View v)
@@ -407,7 +420,10 @@ public class MainActivity extends AppCompatActivity
     /**
      * Author: Kefei Fu
      * Function: do FFT on waveform generated by mic recorder.
+     * Source: http://introcs.cs.princeton.edu/java/97data/FFT.java.html
+     *
      */
+
     public static Complex[] fft(Complex[] x)
     {
 
